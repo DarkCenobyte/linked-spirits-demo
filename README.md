@@ -23,7 +23,7 @@ the same.
 * `linked_spirits_upx.exe` (or the unpacked `linked_spirits.exe`): fullscreen at
   the desktop resolution, 2.35:1 letterbox.
 * **Escape quits immediately**, during the loading line and during the film.
-* Loading takes a few seconds: worker threads render the whole soundtrack
+* Loading takes around ten seconds: worker threads render the whole soundtrack
   (music + voices) into memory, and a short benchmark of the heaviest shots
   picks the internal resolution. Slower GPUs render fewer pixels (down to
   half resolution) instead of dropping frames.
