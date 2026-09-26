@@ -1,0 +1,55 @@
+# speaker|text|word=phonemes (MBROLA/SAMPA symbols as produced by espeak-ng mb-us1, hand-corrected)
+A|White room, no dawn,|White=w AI t / room=r u m / no=n @U / dawn=d O n
+A|I wake beneath a borrowed sun.|I=AI / wake=w EI k / beneath=b @ n i T / a=@ / borrowed=b A r @U d / sun=s V n
+A|Green light through glass,|Green=g r i n / light=l AI t / through=T r u / glass=g l { s
+A|telling me I've just begun.|telling=t_h E l I N / me=m i / I've=AI v / just=dZ V s t / begun=b I g V n
+A|Footsteps return,|Footsteps=f U t s t E p s / return=r I t r= n
+A|but every echo sounds like mine.|but=b V t / every=E v r I / echo=E k @U / sounds=s aU n d z / like=l AI k / mine=m AI n
+A|Who sings between|Who=h u / sings=s I N z / between=b @ t w i n
+A|the hidden currents in the line?|the=D @ / hidden=h I d @ n / currents=k_h r= @ n t s / in=I n / the=D @ / line=l AI n
+B|Follow the signal,|Follow=f A l @U / the=D @ / signal=s I g n @ l
+B|follow the sound.|follow=f A l @U / the=D @ / sound=s aU n d
+B|I am the voice|I=AI / am={ m / the=D @ / voice=v OI s
+B|they buried underground.|they=D EI / buried=b E r i d / underground=V n d r= g r aU n d
+A|I know that tone,|I=AI / know=n @U / that=D { t / tone=t_h @U n
+A|though I have never heard your name.|though=D @U / I=AI / have=h { v / never=n E v r= / heard=h r= d / your=j U r / name=n EI m
+B|You know the wave.|You=j u / know=n @U / the=D @ / wave=w EI v
+B|You know the shape beneath the frame.|You=j u / know=n @U / the=D @ / shape=S EI p / beneath=b @ n i T / the=D @ / frame=f r EI m
+B|I was the whisper in the wire,|I=AI / was=w V z / the=D @ / whisper=w I s p r= / in=I n / the=D @ / wire=w AI r
+B|the quiet pulse behind the wall.|the=D @ / quiet=k w AI @ t / pulse=p_h V l s / behind=b @ h AI n d / the=D @ / wall=w O l
+B|They tuned my voice beyond your hearing,|They=D EI / tuned=t_h u n d / my=m AI / voice=v OI s / beyond=b @ j O n d / your=j U r / hearing=h i r I N
+B|but silence never held it all.|but=b V t / silence=s AI l @ n s / never=n E v r= / held=h E l d / it=I t / all=O l
+A|Why do I hear you in my thoughts?|Why=w AI / do=d u / I=AI / hear=h i r / you=j u / in=I n / my=m AI / thoughts=T O t s
+B|Some frequencies can't be forgot.|Some=s V m / frequencies=f r i k w @ n s i z / can't=k_h { n t / be=b i / forgot=f @ r g A t
+B|They sealed my voice inside the wire,|They=D EI / sealed=s i l d / my=m AI / voice=v OI s / inside=I n s AI d / the=D @ / wire=w AI r
+B|where no one else was meant to hear.|where=w E r / no=n @U / one=w V n / else=E l s / was=w V z / meant=m E n t / to=t_h u / hear=h i r
+B|They buried what I came to know|They=D EI / buried=b E r i d / what=w V t / I=AI / came=k_h EI m / to=t_h u / know=n @U
+B|and built their silence out of fear.|and={ n d / built=b I l t / their=D E r / silence=s AI l @ n s / out=aU t / of=V v / fear=f i r
+A|What did you find beyond the noise?|What=w V t / did=d I d / you=j u / find=f AI n d / beyond=b @ j O n d / the=D @ / noise=n OI z
+B|A truth they could not let me name.|A=@ / truth=t r u T / they=D EI / could=k_h U d / not=n A t / let=l E t / me=m i / name=n EI m
+A|And if I reach across to you?|And={ n d / if=I f / I=AI / reach=r i tS / across=@ k r A s / to=t_h u / you=j u
+B|We may not leave this place the same.|We=w i / may=m EI / not=n A t / leave=l i v / this=D I s / place=p l EI s / the=D @ / same=s EI m
+AB|Between the red and blue|Between=b @ t w i n / the=D @ / red=r E d / and={ n d / blue=b l u
+AB|there is a color without a name.|there=D E r / is=I z / a=@ / color=k_h V l r= / without=w I D aU t / a=@ / name=n EI m
+AB|Between your voice and mine|Between=b @ t w i n / your=j U r / voice=v OI s / and={ n d / mine=m AI n
+AB|something answers neither one the same.|something=s V m T I N / answers={ n s r= z / neither=n i D r= / one=w V n / the=D @ / same=s EI m
+AB|Across the dark,|Across=@ k r A s / the=D @ / dark=d A r k
+AB|across the light,|across=@ k r A s / the=D @ / light=l AI t
+AB|through every world we leave behind,|through=T r u / every=E v r I / world=w r= l d / we=w i / leave=l i v / behind=b @ h AI n d
+AB|Your echo moves|Your=j U r / echo=E k @U / moves=m u v z
+AB|inside my own,|inside=I n s AI d / my=m AI / own=@U n
+AB|two separate signals intertwined.|two=t_h u / separate=s E p r @ t / signals=s I g n @ l z / intertwined=I n t r= t w AI n d
+A|Am I becoming you?|Am={ m / I=AI / becoming=b @ k V m I N / you=j u
+B|No, but I can feel your rhythm changing.|No=n @U / but=b V t / I=AI / can=k_h { n / feel=f i l / your=j U r / rhythm=r I D @ m / changing=tS EI n dZ I N
+A|Are you becoming me?|Are=A r / you=j u / becoming=b @ k V m I N / me=m i
+B|No, but every boundary is fading.|No=n @U / but=b V t / every=E v r I / boundary=b aU n d @ r i / is=I z / fading=f EI d I N
+AB|Then let the silence break apart.|Then=D E n / let=l E t / the=D @ / silence=s AI l @ n s / break=b r EI k / apart=@ p A r t
+AB|Let every hidden circuit sing.|Let=l E t / every=E v r I / hidden=h I d @ n / circuit=s r= k I t / sing=s I N
+AB|If neither voice remains alone,|If=I f / neither=n i D r= / voice=v OI s / remains=r @ m EI n z / alone=@ l @U n
+AB|what wakes may be another thing.|what=w V t / wakes=w EI k s / may=m EI / be=b i / another=@ n V D r= / thing=T I N
+B|They feared the space between our voices,|They=D EI / feared=f i r d / the=D @ / space=s p EI s / between=b @ t w i n / our=aU r / voices=v OI s @ z
+B|the place no instrument could trace.|the=D @ / place=p l EI s / no=n @U / instrument=I n s t r @ m @ n t / could=k_h U d / trace=t r EI s
+A|And what is waiting there between us?|And={ n d / what=w V t / is=I z / waiting=w EI 4 I N / there=D E r / between=b @ t w i n / us=V s
+B|Listen.|Listen=l I s @ n
+C|I wake with memories not my own,|I=AI / wake=w EI k / with=w I D / memories=m E m @ r i z / not=n A t / my=m AI / own=@U n
+C|and hear a name they never knew.|and={ n d / hear=h i r / a=@ / name=n EI m / they=D EI / never=n E v r= / knew=n u
