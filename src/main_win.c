@@ -105,6 +105,20 @@ void entry(void)
     synth_start();                         /* worker threads synthesise the soundtrack */
     demo_init(sw, sh);                     /* meanwhile: shaders, render targets */
     make_text();
+    while (!synth_done()) {                /* precalc: a thin green thread of light */
+        MSG m;
+        PeekMessageA(&m, 0, 0, 0, PM_REMOVE);
+        if (GetAsyncKeyState(VK_ESCAPE)) ExitProcess(0);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(sw / 2 - (int)(synth_progress * sw * 0.2f), sh / 2, (int)(synth_progress * sw * 0.4f) + 1, 1);
+        glClearColor(0.1f, 0.9f, 0.4f, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
+        SwapBuffers(dc);
+        Sleep(15);
+    }
     {   /* time the heaviest shots; on a slower GPU render fewer pixels rather than drop frames */
         static const float bt[3] = { 213.4f, 62, 300 };
         DWORD worst = 0, a; int i;
@@ -119,20 +133,6 @@ void entry(void)
             int k = worst > 160 ? 8 : worst > 90 ? 11 : worst > 60 ? 13 : 14;   /* scale k/16 */
             targets(RW * k / 16, RH * k / 16);
         }
-    }
-    while (!synth_done()) {                /* precalc: a thin green thread of light */
-        MSG m;
-        PeekMessageA(&m, 0, 0, 0, PM_REMOVE);
-        if (GetAsyncKeyState(VK_ESCAPE)) ExitProcess(0);
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glEnable(GL_SCISSOR_TEST);
-        glScissor(sw / 2 - (int)(synth_progress * sw * 0.2f), sh / 2, (int)(synth_progress * sw * 0.4f) + 1, 1);
-        glClearColor(0.1f, 0.9f, 0.4f, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDisable(GL_SCISSOR_TEST);
-        SwapBuffers(dc);
-        Sleep(15);
     }
     glClearColor(0, 0, 0, 1);
 #ifdef DEBUG

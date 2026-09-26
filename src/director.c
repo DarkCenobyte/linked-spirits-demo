@@ -8,7 +8,7 @@
  *  8 cyborg head pos, reveal      9 cyborg yaw, pitch, blink L, blink R
  * 10 cyborg gaze x, y, pupil, mouth open        11 cyborg mouth round, -, distant voice (lab)
  * 12 lights, systems, scan line, door open      13 wave origin, radius
- * 14 dissolve, translucency, -, -               15..19 scene specific
+ * 14 dissolution clock, snapshot time, -, -      15..19 scene specific (18, 19: snapshot camera)
  * 20..39 android joints          40..59 second body joints (astral)
  * 60 left palm normal, curl      61 right palm normal, curl   62 -   63 -, -, -, particle count
  */
@@ -381,6 +381,10 @@ static int direct(float t, float *u)
         mouth(t, mouth_b, 10 * 4 + 3);
         { float mr = u[10 * 4 + 3 + 1]; setv(11, mr, 0, 0, 0); }
         setv(16, 0, 3, z + 3, 6); setv(63, 1, 0, 0.6f, 30000);
+        if (t > 233.4f) {                        /* the contact, then the world dissolves (particle mode 5) */
+            setv(63, 5, 0, 1, 12002 + 250000);
+            setv(15, t - 234.0f, t - 234.6f, (t - 235.2f) * 0.8f, 0);   /* blue point, red point, the pulse up her arm */
+        }
         if (b < 74) {                            /* inside the nave, looking back: she enters */
             cam(v3(2.5f, 1.1f, 16), v3(0, 3.5f, 0), 44);
             setv(3, 14, 0.003f, 0.8f * (1 - ease((t - 172.8f) / 3)), 1);
@@ -426,14 +430,18 @@ static int direct(float t, float *u)
             V3 w = v3(u[30 * 4], u[30 * 4 + 1], u[30 * 4 + 2]);
             cam(v3(-1.0f, 1.62f, 39.05f), vlerp(w, v3(-0.29f, 1.72f, 39.99f), 0.5f), 36);
             setv(3, 0.42f, 0.03f, 0, 1);
-        } else {                                  /* the wave, then the world comes apart */
-            float k = (t - 235.2f) / 14.4f;
-            cam(v3(-1.6f + 1.2f * k, 1.6f + 0.8f * k, 37.4f - 2 * k), v3(-0.1f, 1.8f, 39.6f), 40);
-            setv(3, 2.5f, 0.008f, 0, 1);
+        } else if (t < 243) {                     /* the wave */
+            float k = (t - 235.2f) / 7.8f;
+            cam(v3(-1.6f + 0.4f * k, 1.6f + 0.3f * k, 37.4f - 0.6f * k), v3(-0.1f, 1.8f, 39.6f), 40);
+            setv(3, 2.4f, 0.008f, 0, 1);
+        } else {                                  /* close on the two of them as the world comes apart */
+            float k = ease((t - 243) / 6.6f);
+            cam(vlerp(v3(-1.3f, 1.85f, 38.3f), v3(-0.85f, 1.9f, 38.75f), k), v3(-0.15f, 1.85f, 39.8f), 38);
+            setv(3, mixf(1.7f, 1.2f, k), 0.012f, 0, 1);
         }
         /* the contact wave and the dissolution */
         setv(13, -0.29f, 1.72f, 39.99f, t < 235.2f ? -1 : (t - 235.2f) * (t - 235.2f) * 0.6f);
-        setv(14, ease((t - 243) / 6), 0, 0, 0);
+        setv(14, t - 243, t > 233.4f ? 243 : 0, 0, 0);   /* dissolution clock; snapshot time */
     } else if (b < 167) {
         /* ---- cyberspace: bodies of light, the journey, the duo, the dream */
         Pose pc;

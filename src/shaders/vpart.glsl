@@ -4,6 +4,8 @@ out vec4 pc;          // colour (premultiplied intensity)
 out float pdist;      // distance from the camera (for depth occlusion)
 out float psz;        // sprite size in pixels
 out float pline;      // 1 for streak lines
+layout(binding=4) uniform sampler2D SC;   // the frozen frame: colour
+layout(binding=5) uniform sampler2D SD;   // and distance along each ray
 float ph(float n){return fract(sin(n*12.9898)*43758.5453);}
 vec3 ph3(float n){return fract(sin(vec3(n,n+17.1,n+31.7)*12.9898)*43758.5453);}
 vec3 sdir(float n){vec3 r=ph3(n);float z=r.x*2.-1.,a=r.y*6.2831;return vec3(sqrt(1.-z*z)*vec2(cos(a),sin(a)),z);}
@@ -51,7 +53,7 @@ vec4 bodyPt(int B,float n){
 }
 void main(){
  float i=float(gl_VertexID),t=U[0].x,mode=U[63].x;
- vec3 p=vec3(0),col=vec3(1);float sz=.004,inten=U[63].z;
+ vec3 p=vec3(0),col=vec3(1);float sz=.004,inten=U[63].z,en=0.;
  vec3 r=ph3(i*.137+U[63].y);
  if(mode<1.5){                                   // 1: motes of light floating in the room
   vec3 c=U[16].xyz;vec3 ext=vec3(U[16].w,U[16].w*.45,U[16].w);
@@ -93,6 +95,31 @@ void main(){
   vec3 c=U[1].xyz;float E=6.;
   p=(r-.5)*2.*vec3(E,E*.25,E);p.x-=t*1.2;p=c+mod(p-c+vec3(E,E*.25,E),2.*vec3(E,E*.25,E))-vec3(E,E*.25,E);
   float br=pow(ph(i*.9),3.);col=mix(vec3(.5,.45,.4),vec3(1.,.93,.85),br)*(.05+1.2*br);sz=.004+.03*pow(ph(i*.4),6.);
+ }else if(mode<5.5){                             // 5: the contact, then the world dissolves into points of light
+  if(i<1.5){                                     // a blue point under her finger, then a red one
+   p=U[13].xyz+vec3(i*.012-.006,.004-i*.008,-.012);
+   float k=i<.5?U[15].x:U[15].y;
+   col=(i<.5?vec3(.25,.5,1.):vec3(1.,.25,.15))*30.*clamp(k*4.,0.,1.)*step(0.,k)*(1.-clamp(U[14].x,0.,1.));sz=.004;
+  }else if(i<12002.){                            // the pulse runs up her arm
+   float k=r.x;vec3 W=U[30].xyz,E=U[29].xyz,S=U[28].xyz;
+   p=(k<.5?mix(W,E,k*2.):mix(E,S,k*2.-1.))+normalize(ph3(i*1.7)-.5)*(.03+.01*r.z);
+   col=mix(vec3(.25,.5,1.),vec3(1.,.25,.15),step(.5,r.y))*4.*exp(-pow((k-U[15].z)*8.,2.))*step(0.,U[15].z);sz=.002;
+  }else{                                         // every visible surface of the frozen frame becomes a point of light
+   vec2 ts=vec2(textureSize(SD,0));float j=i-12002.,st=sqrt(ts.x*ts.y/(U[63].w-12002.)),cl=floor(ts.x/st);
+   vec2 g=vec2(mod(j,cl),floor(j/cl))*st+r.xy*st;
+   float dz=texelFetch(SD,ivec2(g),0).x;vec3 sc=texelFetch(SC,ivec2(g),0).rgb;
+   vec3 cp=U[18].xyz,f=normalize(U[19].xyz-cp),rt=normalize(cross(f,vec3(0,1,0))),up=cross(rt,f);
+   rt=rt*cos(U[19].w)+up*sin(U[19].w);up=cross(rt,f);
+   vec2 uv=(g/ts*2.-1.)*vec2(2.353,1);
+   vec3 sp=cp+normalize(f/tan(radians(U[18].w)*.5)+uv.x*rt+uv.y*up)*dz;
+   float rel=length(sp-U[13].xyz)/6.+r.z*.15,tt=max(U[14].x-rel*2.,0.);     // a front sweeping out from the touch
+   p=sp+drift(sp*.3,t)*tt*.35+normalize(sp-U[13].xyz+1e-3)*tt*.05+vec3(0,tt*.3+tt*tt*.06,0);   // they rise like embers
+   vec3 wc=mix(vec3(.25,.5,1.),vec3(1.,.25,.15),step(.5,ph(i*.37)));
+   float sk=pow(ph(i*.53),3.)*3.+.25;                                       // sparkle (energy kept on average)
+   col=mix(sc*1.3+.015,wc*.8,clamp(tt*.3,0.,.6))*sk*(.75+.25*sin(t*(3.+ph(i*.2)*6.)+i))
+      *smoothstep(0.,.3,U[14].x-rel*2.)*(1.-smoothstep(2.,4.5,tt))*(1.-clamp((U[14].x-5.6)/1.,0.,1.));
+   inten*=step(dz,500.)*step(g.y,ts.y);en=st*st;sz=.005+.008*ph(i*.91);
+  }
  }
  pline=0.;
  if(i>=1e7){                                    // streak pass: line segments stretched by the speed
@@ -110,5 +137,5 @@ void main(){
  float s=max(max(px,coc),1.);
  psz=s;
  gl_PointSize=s*2.;
- pc=vec4(col*inten*min(1.,px*px/(s*s)+.02)*(z>.01?1.:0.),1);
+ pc=vec4(col*inten*(en>0.?en/(s*s):min(1.,px*px/(s*s)+.02))*(z>.01?1.:0.),1);   // en: pixels of the frozen frame it carries
 }

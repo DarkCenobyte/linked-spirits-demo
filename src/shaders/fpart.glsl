@@ -9,7 +9,7 @@ void main(){
  float r=dot(c,c);
  if(r>1.)discard;
  float sd=texelFetch(D,ivec2(gl_FragCoord.xy),0).x;
- float vis=smoothstep(0.,.05*pdist,sd-pdist);   // hidden behind surfaces, softly
+ float vis=smoothstep(0.,.05*pdist,sd-pdist+(U[63].x>4.5?.3:0.));   // hidden behind surfaces, softly (the dissolving world is let through)
  float a=psz<2.?exp(-r*3.):mix(exp(-r*3.),1.-smoothstep(.75,1.,r),.8);   // bokeh discs when defocused
  o=vec4(pc.rgb*a*vis,0);
 }

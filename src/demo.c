@@ -10,6 +10,8 @@
 enum { PR_LAB, PR_CATH, PR_SPACE, PR_PART, PR_DOWN, PR_UP, PR_FINAL, NPROG };
 
 static GLuint prog[NPROG], tex_col, tex_dep, tex_text, bl[NBLOOM], fb_scene, fb_part, fb_bl[NBLOOM], fb_out, vao;
+static GLuint tex_snc, tex_snd, fb_snap;   /* a frozen frame of the world, for its dissolution */
+static float Us[NU * 4], snap_t = -1;
 static float U[NU * 4];
 static GLuint preview_fbo;
 static void (*preview_hook)(float *);
@@ -77,6 +79,10 @@ static void targets(int w, int h)
     tex_dep = mk_tex(GL_R32F, w, h);
     fb_scene = mk_fb(tex_col, tex_dep);
     fb_part = mk_fb(tex_col, 0);
+    tex_snc = mk_tex(GL_RGBA16F, w, h);
+    tex_snd = mk_tex(GL_R32F, w, h);
+    fb_snap = mk_fb(tex_snc, tex_snd);
+    snap_t = -1;
     for (i = 0; i < NBLOOM; i++) {
         w = (w + 1) / 2; h = (h + 1) / 2;
         bl[i] = mk_tex(GL_RGBA16F, w, h);
@@ -128,12 +134,34 @@ static void use(int p)
     glUniform4fv(0, NU, U);
 }
 
+/* U[14].y > 0: the world will dissolve from a snapshot of the frame at that time.
+ * It is rendered once (the director is a pure function of time) and its camera
+ * is handed to the particles in U[18] (position, fov) and U[19] (target, roll). */
+static void snapshot(void)
+{
+    float st = U[14 * 4 + 1];
+    int i;
+    if (st <= 0) return;
+    if (st != snap_t) {
+        int sc = direct(st, Us);
+        glBindFramebuffer(GL_FRAMEBUFFER, fb_snap);
+        glViewport(0, 0, rw, rh);
+        glUseProgram(prog[sc]);
+        glUniform4fv(0, NU, Us);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        snap_t = st;
+    }
+    for (i = 0; i < 8; i++) U[18 * 4 + i] = Us[4 + i];
+}
+
 static void demo_frame(float t)
 {
     int i, w, h, np;
     int sc = direct(t, U);                    /* director fills U, returns scene program */
     U[2] = (float)rh;
     if (preview_hook) sc = (preview_hook(U), sc);
+    if (U[14 * 4 + 1] > 0 && U[14 * 4 + 1] != snap_t) { snapshot(); sc = direct(t, U); U[2] = (float)rh; if (preview_hook) preview_hook(U); }
+    snapshot();
     /* 1: scene */
     glBindFramebuffer(GL_FRAMEBUFFER, fb_scene);
     glViewport(0, 0, rw, rh);
@@ -150,6 +178,8 @@ static void demo_frame(float t)
         glEnable(GL_PROGRAM_POINT_SIZE);
         use(PR_PART);
         glBindTextureUnit(1, tex_dep);
+        glBindTextureUnit(4, tex_snc);
+        glBindTextureUnit(5, tex_snd);
         glDrawArrays(GL_POINTS, 0, np);
         if (U[62 * 4 + 2] > 0) glDrawArrays(GL_LINES, 10000000, (int)U[62 * 4 + 2]);
         glDisable(GL_BLEND);

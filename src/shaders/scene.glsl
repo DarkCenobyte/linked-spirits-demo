@@ -160,7 +160,6 @@ vec3 emis(vec3 p,vec3 n,float m){
 #endif
 #ifdef S_CATH
 // ---------------------------------------------------------------- the biomechanical cathedral
-float dots(vec3 p,float r){vec3 q=fract(p*14.)-.5;return (length(q)-r)/14.;}
 // nave along +z; she enters at z=0; the cyborg's face waits at the far wall (0,2.1,40)
 #define BREATH (.5+.5*sin(U[0].x*1.309))
 float cyborg(vec3 p){
@@ -279,9 +278,6 @@ float map(vec3 p){
   if(p.z>30.){float cm;x=curtain(p,cm);if(x<d){d=x;m=cm;}}
  }
  x=cybody(p);if(x<d){d=x;m=gM;w=1.;}
- // the world, and the cables that held her, come apart into points after the wave has passed
- float ds=U[14].x*(1.-smoothstep(U[13].w-14.,U[13].w-2.,length(p-U[13].xyz)));
- if(ds>0.)d=max(d,dots(p,mix(.9,.1,ds)));
  x=android(p);if(x<d){d=x;m=gM;w=0.;}
  x=cyborg(p);if(x<d){d=x;m=gM;w=1.;}
  gM=m;gWho=w;
@@ -535,10 +531,10 @@ vec3 shade(vec3 p,vec3 rd,float t,float m){
   col+=(who>.5?vec3(1.,.2,.1):vec3(.2,.45,1.))*3.*exp(-abs(e)*900.);}
 #endif
 #ifdef S_CATH
- if(U[13].w>0.){ // the violet wave: a front of light, then everything it touched keeps glowing
+ if(U[13].w>0.){ // the contact wave: an interference front of blue and red, then everything it touched glows
   float dw=length(p-U[13].xyz),fr=exp(-pow((dw-U[13].w)/(.3+.04*U[13].w),2.));
-  col+=vec3(.55,.2,1.)*fr*4.+vec3(.35,.2,.7)*(m==6.?1.2:.25)*step(dw,U[13].w)*(.6+.4*sin(dw*3.-U[0].x*6.));
-  col+=vec3(1.,.9,1.)*U[14].x*(1.-smoothstep(U[13].w-14.,U[13].w-2.,dw))*2.;
+  vec3 wc=mix(vec3(.2,.45,1.),vec3(1.,.2,.15),.5+.5*sin(dw*9.-U[0].x*12.));
+  col+=wc*fr*4.+vec3(.5,.3,.9)*(m==6.?.3:.05)*step(dw,U[13].w)*pow(.5+.5*sin(dw*3.-U[0].x*6.),4.);
  }
  {vec3 sp=vec3(0,9.,31.),sd=normalize(vec3(0,2.1,40.)-sp),lv=normalize(sp-p);
   float cone=smoothstep(.93,.985,dot(-lv,sd))*U[8].w;
@@ -579,7 +575,15 @@ void main(){
    col=mix(col,t2<20.?shade(p+r*t2,r,t2,gM):vec3(0),.18);
   }
   od=t;
+#ifdef S_CATH
+  if(U[14].x>0.){  // each surface lets go as its particles leave (the same clock as the particles)
+   float rel=length(p-U[13].xyz)/6.+h2(floor(gl_FragCoord.xy/2.))*.15;
+   float er=smoothstep(0.,.4,U[14].x-rel*2.);col*=1.-er;if(er>.5)od=1e4;}
+#endif
  }else od=1e4;
+#ifdef S_CATH
+ col*=1.-smoothstep(5.,6.4,U[14].x);
+#endif
 #ifdef S_LAB
  {// the glass partition in front of the racks
   float tg=(-3.25-cp.x)/rd.x;vec3 g=cp+rd*tg;
