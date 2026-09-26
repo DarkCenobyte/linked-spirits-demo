@@ -546,7 +546,7 @@ static void synth_render(void)
 /* preview: only the lipsync / timing side of the synth is needed */
 static void synth_timeline_only(void)
 {
-    static float dummy_line[1];
-    (void)dummy_line;
+    trk[T_VA] = ALLOC(SONG_LEN * 4); trk[T_VB] = ALLOC(SONG_LEN * 4);
+    th_voice(0);
 }
 #endif

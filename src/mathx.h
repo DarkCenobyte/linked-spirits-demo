@@ -13,3 +13,5 @@ static inline float expf(float x) { return exp2f(x * 1.44269504f); }
 static inline float floorf(float x) { float i = (float)(int)x; return i > x ? i - 1 : i; }
 #define fabsf __builtin_fabsf
 #define sqrtf __builtin_sqrtf
+static inline float atan2f(float y, float x) { float r; __asm__("fpatan" : "=t"(r) : "0"(x), "u"(y) : "st(1)"); return r; }
+static inline float fmodf(float a, float b) { return a - b * floorf(a / b); }

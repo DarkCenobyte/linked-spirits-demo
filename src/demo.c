@@ -179,6 +179,7 @@ static void demo_frame(float t)
     glBindTextureUnit(0, tex_col);
     glBindTextureUnit(1, bl[0]);
     glBindTextureUnit(2, tex_text);
+    glBindTextureUnit(3, tex_dep);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBlitNamedFramebuffer(fb_out, preview_fbo, 0, 0, scr_w, scr_h, 0, 0, scr_w, scr_h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 }

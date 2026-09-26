@@ -14,15 +14,15 @@ float gEyeSide;       // -1 right eye (image left when facing camera), +1 left e
 float groove(float d,float g,float w,float dp){return max(d,min(w-abs(g),d+dp));}
 
 // face parameters: blink (0 open .. 1 closed), mouth open, mouth round, style (0 android, 1 cyborg)
-float face(vec3 p,float blink,float mo,float mr,float sty){
- vec3 q=p;q.x=abs(q.x);
+float face(vec3 p,vec2 bl2,float mo,float mr,float sty){
+ vec3 q=p;q.x=abs(q.x);float blink=p.x>0.?bl2.y:bl2.x;
  // helmet-like cranium and an oval face mask tapering to the chin
  float d=ell(p-vec3(0,.03,-.02),vec3(.067,.085,.09));
  d=smin(d,ell(p-vec3(0,-.008,.024),vec3(.062,.089,.066)),.025);
  // jaw: two planes converging to the chin (V line), a defined underside, a small chin
- d=smax(d,dot(q-vec3(.05,-.056,.03),normalize(vec3(1,-.65,.28))),.018);
+ d=smax(d,dot(q-vec3(.05+.006*sty,-.056,.03),normalize(vec3(1,-.65+.2*sty,.28))),.018-.006*sty);
  d=smax(d,dot(p-vec3(0,-.093-mo*.006,.05),normalize(vec3(0,-1,.4))),.01);
- d=smin(d,ell(p-vec3(0,-.079-mo*.007,.055),vec3(.02+.002*sty,.013,.016)),.012);
+ d=smin(d,ell(p-vec3(0,-.079-mo*.007-.003*sty,.055),vec3(.02+.007*sty,.013,.016)),.012);
  // planes: forehead, cheeks, temples (sculpted rather than round)
  d=smax(d,dot(p-vec3(0,.04,.082),normalize(vec3(0,.28,1))),.03);
  d=smax(d,dot(q-vec3(.05,-.024,.057),normalize(vec3(1,-.08,.62)))-.002*sty,.024);
@@ -37,13 +37,13 @@ float face(vec3 p,float blink,float mo,float mr,float sty){
  // lips: a subtle bulge, a fine crease
  float mw=.0148-mr*.005;
  d=smin(d,ell(p-vec3(0,-.047-mo*.004,.077-mr*.001),vec3(mw+.001,.0055+mo*.004,.006+mr*.003)),.005);
- float sl=ell(p-vec3(0,-.047-mo*.0045,.093),vec3(mw,.0005+mo*.006+mr*.002,.02));
+ float sl=ell(p-vec3(0,-.047-mo*.0045-.0025*sty*q.x*q.x/(mw*mw),.093),vec3(mw,.0005+mo*.006+mr*.002,.02));
  d=smax(d,-sl,.0015);
  gM=abs(p.y+.049+mo*.0045)<.003+mo*.005&&q.x<mw-.001&&p.z>.07?4.:1.;
  // eyelids: shells around the eyeballs, opened by angular planes (almond shaped)
  vec3 e=q-EC;
  float le=length(e),sh=abs(le-ER-.0014)-.0011,sl2=abs(le-ER-.0009)-.0007;
- float au=mix(.5,-.2,blink)-KU*e.x*e.x+7.*e.x, al=-.42+KL*e.x*e.x+7.*e.x;
+ float au=mix(.5,-.5,blink)-KU*e.x*e.x+7.*e.x, al=-.42+KL*e.x*e.x+7.*e.x;
  float lu=smax(sh,-dot(e,vec3(0,cos(au),-sin(au))),.0009);
  float lo=smax(sl2,dot(e,vec3(0,cos(al),-sin(al))),.0007);
  float lid=max(min(lu,lo),-e.z-.006);
@@ -57,13 +57,18 @@ float face(vec3 p,float blink,float mo,float mr,float sty){
  vec3 eq=(q-vec3(.063,-.008,-.012)).yxz;
  float ear=max(cyl(eq,.021,.006)-.0015,-cyl(eq-vec3(0,.007,0),.013,.003));
  ear=min(ear,cyl(eq,.009,.0075)-.001);
+ if(sty>0.){ // cable connectors where the ears would be
+  vec3 k=eq;k.xz=abs(k.xz);
+  ear=min(ear,cap(q,vec3(.06,-.012,-.02),vec3(.12,-.05,-.09),.007));
+  ear=min(ear,cap(q,vec3(.062,.004,-.01),vec3(.13,.02,-.07),.006));
+  ear=min(ear,cap(q,vec3(.058,-.03,-.03),vec3(.1,-.09,-.08),.008));}
  float bo=sph(q-vec3(.02,.103,.018),.0022);
  if(min(ear,bo)<d){d=min(ear,bo);gM=3.;}
  return d;
 }
 // neck + head, head space
 float headNeck(vec3 p,float blink,float mo,float mr,float sty){
- float d=face(p,blink,mo,mr,sty);
+ float d=face(p,vec2(blink),mo,mr,sty);
  float n=capr(p,vec3(0,-.07,-.034),vec3(0,-.19,-.018),.046,.05);
  float nm=gM;
  d=smin(d,n,.012);
@@ -76,7 +81,7 @@ float headNeck(vec3 p,float blink,float mo,float mr,float sty){
 float seg(vec3 p,vec3 a,vec3 b,float ra,float rb,float ga,float gb){
  vec3 d=normalize(b-a);return capr(p,a+d*ga,b-d*gb,ra,rb);}
 float hand(vec3 p,vec3 W,vec3 H,vec3 pn,float curl){
- vec3 hx=normalize(H-W),hz=normalize(pn-hx*dot(pn,hx)),hy=cross(hz,hx);
+ vec3 hx=normalize(H-W+1e-5),hz=normalize(pn-hx*dot(pn,hx)+vec3(0,1e-4,0)),hy=cross(hz,hx);
  vec3 l=vec3(dot(p-W,hx),dot(p-W,hy),dot(p-W,hz));
  float d=box(l-vec3(.052,0,0),vec3(.042,.036,.011),.01);
  for(int i=0;i<4;i++){
