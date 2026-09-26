@@ -113,6 +113,24 @@ static void walk_pose(Pose *ps, float ph, float amt)
     ps->lean = 0.03f * amt;
 }
 
+/* a running stride (phase in cycles): the leading leg reaches far forward, nearly straight; the trailing one
+   pushes off behind, then folds high as it swings through; elbows at a right angle, the arms driving opposite */
+static void run_pose(Pose *ps, float ph)
+{
+    int s;
+    for (s = 0; s < 2; s++) {
+        float p = (ph + s * 0.5f) * 6.2831853f, c = 0.5f + 0.5f * cosf(p), sp = sinf(p);
+        ps->hf[s] = 0.3f + 0.75f * sp;
+        ps->kf[s] = 0.3f + 1.5f * c * c * c;
+        ps->af[s] = 0.3f * sp - 0.15f;
+        ps->ha[s] = 0.03f;
+        ps->sf[s] = -0.1f - 0.5f * sp;
+        ps->sa[s] = 0.12f;
+        ps->ef[s] = 1.55f - 0.12f * sp;
+    }
+    ps->lean = 0.22f; ps->hp = 0.15f;
+}
+
 /* ---------------------------------------------------------------- helpers */
 static float *U_;
 static void setv(int i, float x, float y, float z, float w) { U_[i * 4] = x; U_[i * 4 + 1] = y; U_[i * 4 + 2] = z; U_[i * 4 + 3] = w; }
@@ -330,7 +348,7 @@ static int direct(float t, float *u)
             setv(3, 4.5f, 0.004f, 0, 0);
         } else if (b < 26) {                     /* Green light through glass: from among the racks */
             cam(v3(-3.55f, 1.5f, H.z - 2.6f), va(H, v3(0, -0.1f, 0)), 30);
-            setv(3, 1.8f, 0.03f, 0, 0);
+            setv(3, 1.8f, 0.018f, 0, 0);
         } else if (b < 28) {                     /* telling me I've just begun: towards the door */
             cam(va(va(H, vs(F, -2.2f)), v3(0.4f, 0.1f, 0)), va(H, vs(F, 2)), 36);
             setv(3, 2.3f, 0.008f, 0, 0);
@@ -381,6 +399,10 @@ static int direct(float t, float *u)
         } else {                                  /* the great doors */
             cam(v3(0, 1.3f, 44), v3(0, 2.2f, 58), 42);
             setv(3, 12, 0.004f, 0, 0);
+        }
+        if (b < 50) {                            /* she is the subject: the focus follows her exactly */
+            float dx = u[4] - H.x, dy = u[5] - H.y + 0.15f, dz = u[6] - H.z;
+            u[3 * 4] = sqrtf(dx * dx + dy * dy + dz * dz);
         }
     } else if (b < 72) {
         /* ---- she pushes the doors; light floods in */
@@ -532,9 +554,9 @@ static int direct(float t, float *u)
             if (b >= 122 && b < 128) {           /* the ring: legs down, a run on its dust, a leap, and away */
                 Pose r = ps, q = pc;
                 float up = ease((t - 305.3f) / 1.9f), run = ease((t - 296.4f) / 1.2f) * (1 - up), f = (t - 296.4f) * 1.45f;
-                walk_pose(&r, f, 1.75f); walk_pose(&q, f + 0.3f, 1.6f);
-                r.root = v3(ps.root.x, 0.9f + 0.05f * cosf(f * 12.566f), 0); q.root = v3(pc.root.x, 1.02f + 0.05f * cosf(f * 12.566f + 1.9f), -0.35f);
-                r.lean = q.lean = 0.3f; r.hy = ps.hy; q.hy = pc.hy;
+                run_pose(&r, f); run_pose(&q, f * 0.96f + 0.37f);
+                r.root = v3(ps.root.x, 0.9f, 0); q.root = v3(pc.root.x, 1.02f, -0.35f);   /* the feet are set on the dust below */
+                r.hy = ps.hy; q.hy = pc.hy;
                 pose_mix(&ps, &r, run); pose_mix(&pc, &q, run);
                 ps.root.y += 3 * up * up; pc.root.y += 3 * up * up;
             }
@@ -578,8 +600,8 @@ static int direct(float t, float *u)
             arm_ik(u, 40, 0, vlerp(v3(u[46 * 4], u[46 * 4 + 1], u[46 * 4 + 2]), va(m, v3(0.04f, 0, 0)), k), v3(0, -1, -0.3f), v3(-1, 0, 0.2f));
         }
         if (b < 110 && t > 253.5f && t < 257.5f) {   /* her hand on the android's shoulder */
-            V3 sh = v3(u[24 * 4], u[24 * 4 + 1], u[24 * 4 + 2]);   /* the wrist behind, the hand over the top of the shoulder */
-            arm_ik(u, 40, 0, vlerp(v3(u[46 * 4], u[46 * 4 + 1], u[46 * 4 + 2]), va(sh, v3(0.03f, 0.075f, -0.13f)), ease((t - 253.5f) / 1.5f)), v3(1, -0.3f, -0.5f), v3(-0.1f, -0.35f, 1));
+            V3 sh = v3(u[24 * 4], u[24 * 4 + 1], u[24 * 4 + 2]);   /* her right hand (the nearer one): the wrist behind, the hand over the top of her left shoulder */
+            arm_ik(u, 40, 1, vlerp(v3(u[50 * 4], u[50 * 4 + 1], u[50 * 4 + 2]), va(sh, v3(-0.01f, 0.075f, -0.13f)), ease((t - 253.5f) / 1.5f)), v3(-1, -0.4f, -0.4f), v3(0.08f, -0.35f, 1));
             setv(60, 0, -1, 0, 0.4f);
         }
         u[59 * 4 + 3] = b < 110 ? ease((t - 251.5f) / 2.5f) : 1;

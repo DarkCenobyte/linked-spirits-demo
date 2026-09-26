@@ -616,10 +616,11 @@ vec3 shade(vec3 p,vec3 rd,float t,float m){
  if(m==13.){alb=vec3(.62,.05,.04);rough=.2;}                 // an extinguisher
  if(m==11.){alb=vec3(.2,.035,.033)*(.8+.35*vn(vec3(p.x*500.,p.y*40.,p.z*500.)));rough=.4;}      // muscle fibres
  if(m==9.){alb=vec3(.08,.085,.09);rough=.3;if(length(hR*(p-hP))<.12)alb=vec3(.035,.03,.032);}   // mouth interior
+ float fw=t*.0012;                  // the pixel's footprint: thin seams fade into their average instead of shimmering
  if(m==1.&&p.y>.001&&p.y<3.99){      // wall panel seams
   vec2 w=abs(p.x)>4.9||(abs(p.x)>1.3&&p.z>6.&&p.z<25.6)?p.zy:p.xy;vec2 g=abs(fract(w/vec2(1.5,1.))-.5);
-  alb*=1.-.3*(1.-smoothstep(.0,.004,.5-max(g.x,g.y)));}
- if(m==1.&&p.y<.001){vec2 g=abs(fract(p.xz)-.5);alb*=1.-.15*(1.-smoothstep(0.,.003,.5-max(g.x,g.y)));}
+  alb*=1.-.3*.004/(.004+fw)*(1.-smoothstep(.0,.004+fw,.5-max(g.x,g.y)));}
+ if(m==1.&&p.y<.001){vec2 g=abs(fract(p.xz)-.5);alb*=1.-.15*.003/(.003+fw)*(1.-smoothstep(0.,.003+fw,.5-max(g.x,g.y)));}
  if(m<=4.){ // lash line on the upper lid margin, painted brows
   vec3 hp=hR*(p-hP),e=vec3(abs(hp.x),hp.yz)-EC;
   float bx=(abs(hp.x)-.031)/.019;

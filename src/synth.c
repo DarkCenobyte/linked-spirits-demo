@@ -397,7 +397,7 @@ static void th_bed(void *u)
 #ifndef BALPHA
 #define BALPHA 0.9f
 #endif
-static const VStyle vstyle[5] = {
+static const VStyle vstyle[4] = {
     /* alpha tilt breath vibr vibd sub dual dualint gain legato */
     { AALPHA, ATILT, 0.14f, 5.3f, 0.16f, 0.00f, 0.0f, 0, 0.60f, 0.82f },  /* A android: clear, airy, not shrill */
     { BALPHA, 1.00f, 0.05f, 4.7f, 0.28f, 0.30f, 0.0f, 0, 0.60f, 0.95f },  /* B cyborg: lower tract, sub-harmonic depth */

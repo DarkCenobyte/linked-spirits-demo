@@ -8,6 +8,18 @@ layout(binding=3) uniform sampler2D D;
 #define FADE U[62].x
 #define TITLE U[62].y
 vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
+#ifdef FINAL
+// edges of the scene smoothed along their own direction (FXAA-style), luma measured after a soft tone curve
+float lu(vec2 p){vec3 c=texture(A,p).rgb;return dot(c/(1.+c),vec3(.3,.59,.11));}
+vec3 fxaa(vec2 p,vec2 s){
+ float a=lu(p+vec2(-s.x,-s.y)),b=lu(p+vec2(s.x,-s.y)),c=lu(p+vec2(-s.x,s.y)),d=lu(p+s),m=lu(p);
+ vec2 e=vec2(a+b-c-d,a+c-b-d)*vec2(-1,1);
+ e=clamp(e/(min(abs(e.x),abs(e.y))+max((a+b+c+d)*.03,.008)),-8.,8.)*s;
+ vec3 x=.5*(texture(A,p-e/6.).rgb+texture(A,p+e/6.).rgb),y=x*.5+.25*(texture(A,p-e*.5).rgb+texture(A,p+e*.5).rgb);
+ float l=dot(y/(1.+y),vec3(.3,.59,.11));
+ return l<min(m,min(min(a,b),min(c,d)))||l>max(m,max(max(a,b),max(c,d)))?x:y;
+}
+#endif
 void main(){
 #ifdef DOWN
  // 13-tap downsample (soft, stable)
@@ -29,7 +41,7 @@ void main(){
  float fd=U[3].x,ap=U[3].y*res.y;
  float d0=texture(D,p).x;
  float c0=min(ap*abs(d0-fd)/max(d0,1e-3),24.);
- vec3 acc=texture(A,p).rgb;float ws=1.;
+ vec3 acc=fxaa(p,1./res);float ws=1.;
  float R=min(24.,ap*.9+1.);
  if(ap>.01)for(int i=0;i<40;i++){
   float r=sqrt((float(i)+.5)/40.)*R,a=float(i)*2.39996;

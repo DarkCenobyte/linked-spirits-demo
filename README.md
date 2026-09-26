@@ -27,15 +27,16 @@ the same.
 * Loading takes around ten seconds: worker threads render the whole soundtrack
   (music + voices) into memory, and a short benchmark of the heaviest shots
   picks the internal resolution. Slower GPUs render fewer pixels (down to
-  half resolution) instead of dropping frames.
+  half resolution) instead of dropping frames; fast ones render more
+  (1.25× or 1.5× per axis) and the film is supersampled.
 * With no audio device the film still runs, timed on the system clock.
 
 ## Size
 
 | file | bytes |
 |---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 226 816 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **100 864** (98.5 KiB) |
+| `linked_spirits.exe` (raw, CRT-free) | 227 328 |
+| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **99 840** (97.5 KiB) |
 
 Artistic quality came first. At 77.5 KiB, going under 64 KiB would have
 meant cutting the voice bank and with it the intelligibility of the singing,
@@ -55,6 +56,14 @@ where it shows most:
 Before that, the bytes above 64 KiB had gone into the cyborg (her body, the
 machine and the cable dome of the cathedral) and the dissolution of the
 world.
+
+Lossless savings (the image and the sound are unchanged):
+
+* the voice bank stores deltas only for its first three PCA components, which
+  move smoothly; the others are noise-like and pack better as plain values
+  (≈ 1 KB; the rendered soundtrack is bit-identical);
+* the release shaders leave out the look-development test mode;
+* the exe has a fixed base and no relocation table.
 
 Where the packed bytes go (LZMA estimates):
 
@@ -80,8 +89,8 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 | 2:53 | **The cathedral**: a nave of vertebral ribs and cables. At its end, a gigantic dome of woven cables with a face at its apex. Extreme close-up: the left eye opens **blue**, then the right one **red**, on an impact. |
 | 3:07 | **The sung dialogue**. The cyborg's worn face is set into the mass of cables. Below it hangs a body of worn plates over exposed muscle, arms ending in torn wires, hung from the vault and sunk into a machine. |
 | 3:50 | The android reaches up and takes the torn stump of her arm. A blue point of light appears under her finger, then a red one; a pulse runs up her arm, and **the contact wave**, a red/blue interference front, spreads through the cathedral. Then **the world dissolves**: every visible surface (the cables, the cyborg, the android) turns into points of light in its own colours, released by a front sweeping out from the touch, rising like embers into the dark. |
-| 4:10 | **Astral bodies**: the screen stays black, then the astral world fades in: a blue body of particles (android) with a green gorget and pauldrons; a taller red body (cyborg) with vivid blue ones. Her hand on the android's shoulder. Below them, a spiral galaxy of a quarter of a million points of light, leaning towards the viewer; above, the band of another galaxy with its dust lanes, veils of nebulae and bright stars with diffraction spikes. |
-| 4:24 | **The journey**: they face the flight and lean into it, arms swept back, legs trailing, each body shedding sparks of its own colour behind it. Acceleration: the universe streams towards them, streaks of stars, the edges of the frame pull everything out of it. An Earth-like world with a sunset line and a dreaming night side, a desert world, then a gas giant: its ring comes up under their feet, they land and run on its ice and rock, the giant looming beside them, and leap back into flight. An ocean world. Whoever sings reaches out towards the other. |
+| 4:10 | **Astral bodies**: the screen stays black, then the astral world fades in: a blue body of particles (android) with a green gorget and pauldrons; a taller red body (cyborg) with vivid blue ones. Her right hand on the android's shoulder. Below them, a spiral galaxy of a quarter of a million points of light, leaning towards the viewer; above, the band of another galaxy with its dust lanes, veils of nebulae and bright stars with diffraction spikes. |
+| 4:24 | **The journey**: they face the flight and lean into it, arms swept back, legs trailing, each body shedding sparks of its own colour behind it. Acceleration: the universe streams towards them, streaks of stars, the edges of the frame pull everything out of it. An Earth-like world with a sunset line and a dreaming night side, a desert world, then a gas giant: its ring comes up under their feet, they land and run on its ice and rock in long strides, arms driving, the giant looming beside them, and leap back into flight. An ocean world. Whoever sings reaches out towards the other. |
 | 4:34 | **Duo** (voices A and B together). |
 | 5:22 | *Am I becoming you?* Push into her iris: the iris becomes a planetary system. The pupil ignites into a star, the fibres settle into dust lanes, worlds appear on their orbits. |
 | 5:43 | The final quatrain, hand in hand, above a disc where worlds are born: dust of light to the horizon, with gaps opened by young worlds and a young star at its centre that backlights everything (a planet eclipsing into a ring of fire). |
@@ -118,6 +127,12 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 * **Post**: a 6-level bloom pyramid, a 40-tap gather depth of field weighted by
   each sample's circle of confusion, subtle chromatic fringe, ACES, a cool
   "material world" grade vs an astral grade, vignette, grain, and the title.
+* **Anti-aliasing**: supersampling on fast GPUs; on every GPU an FXAA-style
+  pass smooths edges along their own direction, and fine procedural patterns
+  (wall seams, floor tiles) are filtered by the pixel's footprint so they fade
+  into their average at a distance instead of shimmering. (There are no
+  textures seen at grazing angles, so anisotropic filtering would not change
+  anything.)
 * **Lyrics**: every sung line is drawn once at start-up into a text atlas (GDI
   on Windows). The post pass outlines the glyphs in the colour of the singer
   (green: the android, red: the cyborg, light grey: the duo and the merged

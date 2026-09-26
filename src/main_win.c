@@ -138,8 +138,8 @@ void entry(void)
             a = timeGetTime() - a;
             if (a > worst) worst = a;
         }
-        if (worst > 44) {                  /* > 22 ms a frame */
-            int k = worst > 160 ? 8 : worst > 90 ? 11 : worst > 60 ? 13 : 14;   /* scale k/16 */
+        if (worst > 44 || worst < 22) {   /* > 22 ms a frame: fewer pixels; < 11 ms: supersample (anti-aliasing) */
+            int k = worst > 160 ? 8 : worst > 90 ? 11 : worst > 60 ? 13 : worst > 44 ? 14 : worst < 14 ? 24 : 20;   /* scale k/16 */
             targets(RW * k / 16, RH * k / 16);
         }
     }

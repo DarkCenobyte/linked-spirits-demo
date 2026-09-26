@@ -28,9 +28,6 @@
 #ifndef VCMP
 #define VCMP 0.6f    /* sung phrasing: energy compression exponent */
 #endif
-#ifndef VCB
-#define VCB 0        /* 0: first-version diction with gentler sibilants, 1: gentler consonant boosts overall */
-#endif
 #ifndef VGL
 #define VGL 1        /* 1: natural pitch (glides, scoops, irregular vibrato, drift, jitter), 0: the first version */
 #endif
@@ -79,6 +76,9 @@ static void lsf_fix(float *l)
 #ifndef VB_EH
 #define VB_EH 4
 #endif
+#ifndef VB_MD
+#define VB_MD 16
+#endif
 void voice_init(void)
 {
     const unsigned char *p = vb_blob, *nph = p, *nk = p + VB_WORDS, *ph, *du, *gp, *rm, *cf;
@@ -103,7 +103,7 @@ void voice_init(void)
             for (j = 0; j < VB_M; j++) {
                 const unsigned char *c = cf + j * nkt + kbase; int q = 0;
                 for (k = 0; k < nk[w]; k++) {
-                    q += (signed char)c[k];
+                    q = (j < VB_MD ? q : 0) + (signed char)c[k];   /* deltas for the first components only */
                     for (i = 0; i < 16; i++) L[k][i] += q * vb_step[j] * vb_B[j * 16 + i];
                 }
             }
@@ -281,8 +281,8 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                 g = G * powf(g / G + 1e-9f, VCMP);        /* sung phrasing: stress contrasts compressed */
                 if (t < sg[0].t0 || t > sg[nsg - 1].t1) g = 0;
                 /* sung diction: consonants are articulated harder than in speech (sibilants gently) */
-                { static const float CB[2][8] = { { 1.0f, 1.25f, 1.7f, 1.9f, 1.6f, 1.5f, 1.8f, 1.6f }, { 1.0f, 1.2f, 1.55f, 1.65f, 1.35f, 1.3f, 1.5f, 1.4f } };
-                  g *= CB[VCB][VCLS(fl)]; }
+                { static const float CB[8] = { 1.0f, 1.25f, 1.7f, 1.9f, 1.6f, 1.5f, 1.8f, 1.6f };   /* per consonant class */
+                  g *= CB[VCLS(fl)]; }
                 switch (VCLS(fl)) {
                 case 0: case 1: tv = 1; tn = st->breath; break;
                 case 2: tv = 0.35f; tn = 0.8f; break;

@@ -17,7 +17,7 @@ CFLAGS="-Oz -s -march=x86-64-v2 -mfpmath=sse -ffast-math -fno-math-errno -fno-as
  -fno-stack-protector -fno-ident -ffunction-sections -fno-builtin-memset -fno-builtin-memcpy -fno-tree-loop-distribute-patterns \
  -fomit-frame-pointer -fno-unwind-tables -fmerge-all-constants"
 x86_64-w64-mingw32-gcc $CFLAGS -include src/mathx.h -nostdlib -nostartfiles -Wl,-e,entry -Wl,--gc-sections \
-  -Wl,--subsystem,windows -Wl,--strip-all -Wl,--file-alignment,512 -Wl,--section-alignment,4096 \
+  -Wl,--subsystem,windows -Wl,--strip-all -Wl,--file-alignment,512 -Wl,--section-alignment,4096 -Wl,--disable-reloc-section -Wl,--disable-dynamicbase \
   -o build/linked_spirits.exe src/main_win.c -lkernel32 -luser32 -lgdi32 -lopengl32 -lwinmm -lgcc
 ls -l build/linked_spirits.exe
 if [ "$1" = "debug" ]; then
