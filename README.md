@@ -20,8 +20,9 @@ the same.
 
 * Windows 10/11 x64, a GPU with OpenGL 4.6 (a recent discrete GPU is
   recommended; the scenes are heavy raymarching).
-* `linked_spirits_upx.exe` (or the unpacked `linked_spirits.exe`): fullscreen at
-  the desktop resolution, 2.35:1 letterbox.
+* Prebuilt binaries are in [`release/`](release/): `linked_spirits_upx.exe`
+  (UPX-packed, the one to run) and `linked_spirits.exe` (the same program,
+  unpacked). Both run fullscreen at the desktop resolution, 2.35:1 letterbox.
 * **Escape quits immediately**, during the loading line and during the film.
 * Loading takes around ten seconds: worker threads render the whole soundtrack
   (music + voices) into memory, and a short benchmark of the heaviest shots
