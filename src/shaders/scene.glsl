@@ -169,23 +169,57 @@ float cyborg(vec3 p){
  gGaze=cGaze;
  return face(h,U[9].zw,U[10].w,U[11].x,1.);
 }
-// three soft cables fall from the mass along the sides of her face (never over the eyes or cheeks)
-vec3 bez(vec3 a,vec3 b,vec3 c,vec3 d,float s){float t=1.-s;return a*t*t*t+3.*b*t*t*s+3.*c*t*s*s+d*s*s*s;}
+// her body: worn plates over exposed muscle, a sternum column and ribs, arms ending in torn wires;
+// hung from the vault by cables, sunk at the waist into a machine
+float wire(vec3 p,vec3 a,vec3 b,float sg,float r){vec3 m=(a+b)*.5-vec3(0,sg,0),o=a;float d=1e5;
+ for(int k=1;k<=4;k++){float s=float(k)*.25;vec3 n=mix(mix(a,m,s),mix(m,b,s),s);d=min(d,cap(p,o,n,r));o=n;}return d;}
 float cybody(vec3 p){
- vec3 h=cR*(p-cP);
- if(dot(h,h)>.06)return length(h)-.2;
- float d=1e5;
- for(int i=0;i<3;i++){float sw=.004*sin(U[0].x*.9+float(i)*2.);
-  vec3 a=i==0?vec3(-.03,.115,-.01):i==1?vec3(-.01,.125,-.03):vec3(.025,.115,-.01),
-       b=i==0?vec3(-.135,.07,.05):i==1?vec3(-.16,.09,.035):vec3(.13,.06,.055),
-       c=i==0?vec3(-.075,-.07,.04):i==1?vec3(-.1,-.09,.03):vec3(.08,-.08,.035),
-       e=i==0?vec3(-.035,-.15,-.02):i==1?vec3(-.06,-.17,-.03):vec3(.03,-.16,-.02);
-  b.x+=sw;c.x+=sw*1.5;
-  b.z+=.05;c.z+=.05;
-  vec3 o=a;float r=i==1?.0055:.0065;
-  for(int k=1;k<=8;k++){vec3 n=bez(a,b,c,e,float(k)/8.);d=min(d,cap(h,o,n,r));o=n;}
- }
- gM=8.;return d;
+ float d=1e5,m=6.,x;
+ for(int i=0;i<3;i++){float s=float(i)-1.;                                  // cables from her skull and shoulders to the vault
+  d=min(d,cap(p,cP+vec3(s*.03,.07,-.06)*cR,vec3(s*.35,8.,40.7),.009));
+  if(i<2){s=float(i)*2.-1.;
+   d=min(d,cap(p,vec3(s*.13,1.98,40.12),vec3(s*.7,8.,40.9),.011));
+   d=min(d,cap(p,vec3(s*.24,1.83,40.1),vec3(s*1.3,7.5,40.4),.008));}}
+ vec3 mq=p-vec3(0,.8,40.26);mq.x=abs(mq.x);
+ x=box(mq,vec3(.24,.8,.36),.05);                                             // the machine housing
+ x=max(x,-box(mq-vec3(0,.8,-.1),vec3(.17,.06,.17),.04));                    // its mouth, where her body enters
+ x=min(x,box(mq-vec3(.41,1.,.06),vec3(.045,.34,.28),.03));                   // side braces
+ x=min(x,box(p-vec3(0,1.78,40.2),vec3(.37,.26,.025),.02));                  // backrest between the braces
+ if(x<d){d=x;m=9.;}
+ x=tor(p-vec3(0,1.6,40.08),.14,.018);                                        // a collar ring at her waist
+ for(int i=0;i<2;i++){float s=float(i)*2.-1.;                                // clamps gripping her arms
+  x=min(x,min(cap(p,vec3(s*.37,1.77,40.1),vec3(s*.29,1.76,40.08),.018),tor((p-vec3(s*.28,1.77,40.075)).yxz,.043,.009)));}
+ if(x<d){d=x;m=3.;}
+ vec3 b=p-vec3(0,1.83,40.07),q=b;q.x=abs(q.x);
+ if(dot(b,b)>.3){gM=m;return d;}
+ float mu=ell(b,vec3(.13,.16,.085));                                        // ribcage under the muscle
+ mu=smin(mu,capr(q,vec3(.02,.12,0),vec3(.15,.1,.01),.035,.04),.03);          // trapezius to the shoulders
+ mu=smin(mu,cap(p,vec3(0,1.95,40.075),cP+vec3(0,-.06,-.03)*cR,.037),.02);    // neck
+ if(mu<d){d=mu;m=11.;}
+ float pl=ell(q-vec3(.062,-.035,-.062),vec3(.058,.055,.045));                // plates: breasts
+ pl=min(pl,capr(q,vec3(.035,.125,-.03),vec3(.16,.115,-.005),.02,.03));       // clavicles
+ pl=min(pl,ell(q-vec3(.175,.1,.01),vec3(.06,.055,.06)));                     // shoulder caps
+ pl=min(pl,max(max(ell(b,vec3(.137,.167,.092)),.085-q.x),max(q.y-.06,-q.y-.14)));   // flanks
+ pl=groove(pl,mod(q.y,.035)-.0175+step(q.x,.09)*.01,.0006,.0012);
+ for(int i=0;i<2;i++){float s=float(i)*2.-1.;                                // arm stumps
+  pl=min(pl,capr(p,vec3(s*.18,1.93,40.08),vec3(s*.28,1.75,40.06),.042,.036));}
+ if(pl<d){d=pl;m=1.;}
+ float sp=max(box(vec3(q.x,mod(b.y,.028)-.014,b.z+.084),vec3(.013,.0105,.012),.004),abs(b.y+.05)-.16);  // sternum column
+ for(int i=0;i<5;i++){float y=.05-float(i)*.042,R=.13*sqrt(max(1.-y*y/.0256,.05));    // ribs
+  sp=min(sp,max(length(vec2(length(b.xz*vec2(1.,1.53))-R,b.y-y+.25*q.x))-.006,b.z));}
+ sp=min(sp,max(box(vec3(q.x,mod(b.y,.03)-.015,b.z-.01),vec3(.022,.012,.02),.005),abs(b.y+.23)-.09));   // the spine at her open waist
+ vec3 nt=cP+vec3(0,-.075,.0)*cR,nb=vec3(0,1.955,40.035),na=normalize(nt-nb),nr=b+vec3(0,1.83,40.07)-nb;   // the throat: white rings
+ float ns=dot(nr,na);
+ sp=min(sp,max(length(nr-na*ns)-.019,max(abs(mod(ns,.016)-.008)-.005,abs(ns-.035)-.035)));
+ if(sp<d){d=sp;m=8.;}
+ x=1e5;
+ for(int i=0;i<6;i++){float a=float(i)*1.05+.5;                              // cables from her ribcage into the machine
+  x=min(x,cap(b,vec3(cos(a)*.075,-.13,sin(a)*.05),vec3(cos(a)*.1,-.33,sin(a)*.07),.011));}
+ for(int i=0;i<8;i++){float s=float(i/4)*2.-1.,k=float(i%4);                 // torn wires spilling from the stumps
+  vec3 e=vec3(s*.28,1.75,40.06)+vec3(s*.01*k,-.01,.01*(k-1.5));
+  x=min(x,wire(p,e,vec3(s*(.3+.06*k),1.2+.08*k,39.95+.07*k),.12+.03*k,.0035+.0015*mod(k,2.)));}
+ if(x<d){d=x;m=6.;}
+ gM=m;return d;
 }
 float ribs(vec3 p){
  vec2 a=vec2(abs(p.x)+6.,p.y);float R=length(a),th=atan(a.y,a.x);
@@ -209,7 +243,8 @@ const vec4 HL[9]=vec4[](vec4(-.95,1.25,.5,.35),vec4(.85,1.35,.45,.3),vec4(-.45,.
 float zdome(float r){return 39.99+.11*smoothstep(.15,.6,r)+1.3*pow(min(r/3.6,1.),2.);}   // it swallows the back of her head
 float curtain(vec3 p,out float m){
  m=6.;
- vec2 v=(p.xy-vec2(0,2.1))*vec2(.85,1);float r=length(v),an=atan(v.y,v.x),zf=zdome(r)+.03*sin(an*5.+r*3.)*min(r,1.);
+ vec2 v=(p.xy-vec2(0,2.1))*vec2(.85,1);float r=length(v),an=atan(v.y,v.x),zf=zdome(r)+.03*sin(an*5.+r*3.)*min(r,1.)
+  +.13*smoothstep(-.05,-.3,v.y)*(1.-smoothstep(.45,.9,r));             // behind her body the mass recedes
  float d=min(41.4-p.z,(zf+.05-p.z)*.75);
  for(int i=0;i<2;i++){                                   // two layers of cables woven over each other, converging on her
   float fi=float(i),n=fi<.5?70.:43.,sec=6.2832/n,a=an+.12*sin(r*1.3+fi*2.)+.05*sin(r*3.7+fi);
@@ -218,7 +253,7 @@ float curtain(vec3 p,out float m){
   float zc=zf+rc*(1.+.7*sin(r*5.+id*2.1+fi*3.14));
   d=min(d,(length(vec2(w*r,p.z-zc))-rc)*.8);
  }
- float hm=length(vec2(r-.21,p.z-zdome(.21)+.022))-.011;  // a thin halo ring around her head
+ float hm=1e5;
  for(int i=0;i<3;i++){float R=1.1+float(i)*.9;hm=min(hm,length(vec2(r-R,p.z-zdome(R)+.01))-.03-.01*float(i));}  // hoops
  float ba=mod(an+.3,.7854)-.3927;
  hm=min(hm,box(vec3(ba*r,r-3.25,p.z-41.),vec3(.12,.3,.4),.02));     // brackets bolted into the wall
@@ -450,6 +485,7 @@ vec3 shade(vec3 p,vec3 rd,float t,float m){
  if(m==6.){alb=vec3(.12,.13,.14);rough=.3;}
  if(m==8.){alb=vec3(.93);rough=.2;}
  if(m==10.){alb=vec3(.52,.51,.49);rough=.25;}
+ if(m==11.){alb=vec3(.2,.035,.033)*(.8+.35*vn(vec3(p.x*500.,p.y*40.,p.z*500.)));rough=.4;}      // muscle fibres
  if(m==9.){alb=vec3(.08,.085,.09);rough=.3;if(length(hR*(p-hP))<.12)alb=vec3(.035,.03,.032);}   // mouth interior
  if(m==1.&&p.y>.001&&p.y<3.99){      // wall panel seams
   vec2 w=abs(p.x)>4.9?p.zy:p.xy;vec2 g=abs(fract(w/vec2(1.5,1.))-.5);

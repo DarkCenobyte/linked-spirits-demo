@@ -359,14 +359,14 @@ static int direct(float t, float *u)
         u[12 * 4] = 0.5f + 0.6f * ease((t - 180) / 8);
         u[12 * 4 + 1] = 1;
         walk_pose(&ps, z / 1.3f, sp);
-        if (t > 228) z = mixf(38.6f, 39.35f, ease((t - 228) / 3));           /* one step closer */
+        if (t > 228) z = mixf(38.6f, 39.5f, ease((t - 228) / 3));            /* one step closer */
         ps.root = v3(0, ps.root.y, z);
         ps.hp = t > 205 ? 0.2f + 0.05f * wobble(t * 0.5f, 4) : 0.1f;           /* she looks up at her */
         ps.hy = 0.1f * wobble(t * 0.3f, 8);
         fk(u, 20, &ps, &hy, &hp);
-        if (t > 230.4f) {                        /* the hand rises and touches a cable below her face */
+        if (t > 230.4f) {                        /* the hand rises and takes the torn stump of her arm */
             float k = ease((t - 230.4f) / 4.2f);
-            V3 rest = v3(u[30 * 4], u[30 * 4 + 1], u[30 * 4 + 2]), T = v3(-0.24f, 1.47f, 39.83f);
+            V3 rest = v3(u[30 * 4], u[30 * 4 + 1], u[30 * 4 + 2]), T = v3(-0.29f, 1.72f, 39.99f);
             arm_ik(u, 20, 1, vlerp(rest, T, k), v3(-1, -0.6f, -0.2f), v3(0.05f, mixf(-1, 0.55f, k), mixf(0, 1, k)));
             setv(61, 0, mixf(0, -0.3f, k), mixf(0, 1, k), 0.15f);
         }
@@ -424,7 +424,7 @@ static int direct(float t, float *u)
             setv(3, mixf(0.6f, 2.5f, k), 0.015f, 0, 1);
         } else if (b < 98) {                     /* the hand */
             V3 w = v3(u[30 * 4], u[30 * 4 + 1], u[30 * 4 + 2]);
-            cam(v3(-0.95f, 1.55f, 38.9f), vlerp(w, v3(-0.24f, 1.5f, 39.8f), 0.5f), 34);
+            cam(v3(-1.0f, 1.62f, 39.05f), vlerp(w, v3(-0.29f, 1.72f, 39.99f), 0.5f), 36);
             setv(3, 0.42f, 0.03f, 0, 1);
         } else {                                  /* the wave, then the world comes apart */
             float k = (t - 235.2f) / 14.4f;
@@ -432,7 +432,7 @@ static int direct(float t, float *u)
             setv(3, 2.5f, 0.008f, 0, 1);
         }
         /* the contact wave and the dissolution */
-        setv(13, -0.24f, 1.47f, 39.83f, t < 235.2f ? -1 : (t - 235.2f) * (t - 235.2f) * 0.6f);
+        setv(13, -0.29f, 1.72f, 39.99f, t < 235.2f ? -1 : (t - 235.2f) * (t - 235.2f) * 0.6f);
         setv(14, ease((t - 243) / 6), 0, 0, 0);
     } else if (b < 167) {
         /* ---- cyberspace: bodies of light, the journey, the duo, the dream */
