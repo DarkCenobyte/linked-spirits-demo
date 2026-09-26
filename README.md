@@ -241,5 +241,5 @@ CAMH="0 0 .8 30" build/preview frames 50 50 1 out   # camera relative to her hea
 | `src/director.c` | the film: shots, cameras, poses, animation, uniform layout |
 | `src/synth.c`, `src/voice.c` | music synthesis and singing-voice synthesis |
 | `src/shaders/*.glsl` | shaders (embedded by `tools/embed_shaders.py`) |
-| `src/gen_*.h` | generated data: shaders, score, voice bank |
+| `src/gen_score.h`, `src/gen_voice.h` | generated data: score and voice bank (`src/gen_shaders.h` is written by every `build.sh` run) |
 | `tools/` | score, voice bank builder, minifier, Whisper tests |
