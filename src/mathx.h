@@ -15,3 +15,5 @@ static inline float floorf(float x) { float i = (float)(int)x; return i > x ? i 
 #define sqrtf __builtin_sqrtf
 static inline float atan2f(float y, float x) { float r; __asm__("fpatan" : "=t"(r) : "0"(x), "u"(y) : "st(1)"); return r; }
 static inline float fmodf(float a, float b) { return a - b * floorf(a / b); }
+static inline float log2f(float x) { float r; __asm__("fld1\n\tfxch\n\tfyl2x" : "=t"(r) : "0"(x)); return r; }
+static inline float powf(float x, float y) { return exp2f(y * log2f(x)); }

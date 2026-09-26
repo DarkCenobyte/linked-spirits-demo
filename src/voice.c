@@ -19,6 +19,24 @@
 #ifndef VMORPH
 #define VMORPH 0.8f
 #endif
+#ifndef VFT
+#define VFT 1        /* high notes: first formant follows the pitch */
+#endif
+#ifndef VBW
+#define VBW 0.025f   /* high notes: formant widening */
+#endif
+#ifndef VCMP
+#define VCMP 0.6f    /* sung phrasing: energy compression exponent */
+#endif
+#ifndef VCB
+#define VCB 0        /* 0: first-version diction with gentler sibilants, 1: gentler consonant boosts overall */
+#endif
+#ifndef VGL
+#define VGL 1        /* 1: natural pitch (glides, scoops, irregular vibrato, drift, jitter), 0: the first version */
+#endif
+#ifndef VSUS
+#define VSUS 0.35f   /* held vowels: how much spoken stress remains */
+#endif
 #define VMAXF 24000
 #define VMAXP 1024
 #define VMAXS 256
@@ -127,7 +145,7 @@ void voice_init(void)
 }
 
 /* one line of singing ------------------------------------------------------ */
-typedef struct { float t0, t1, r0, r1; int ph, kind; } VSeg; /* kind: 0 cons, 1 vowel, 2 diphthong */
+typedef struct { float t0, t1, r0, r1, gm; int ph, kind; } VSeg; /* kind: 0 cons, 1 vowel, 2 diphthong; gm: mean gain */
 
 static void lsf2poly(const float *l, double *a)
 {
@@ -192,6 +210,7 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
             VSeg *g = &sg[nsg++]; int p = lp[i];
             float d = (vp_r1[p] - vp_r0[p]) * 0.005f;
             g->ph = p; g->r0 = vp_r0[p]; g->r1 = vp_r1[p];
+            { int f; float sm = 0; for (f = (int)g->r0; f < (int)g->r1; f++) sm += vf_g[f]; g->gm = sm / (g->r1 - g->r0 + 1e-6f); }
             g->kind = i == sv[s] ? ((vp_fl[p] & 16) ? 2 : 1) : 0;
             if (i == sv[s]) d = vdur; else if (i > sv[s]) d *= sc;
             g->t0 = t; g->t1 = t + d; t += d;
@@ -199,9 +218,13 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
     }
     /* render */
     {
-        double bs[17], a[16]; float lsf[16], pit = nt[0].pitch, ph1 = 0, ph2 = 0, ph3 = 0, de = 0, lpv = 0, lpn = 0;
-        float vo = 0, no = 0, gs = 0, prevv = 0, jit = 0;
+        double bs[17], a[16]; float lsf[16], pit = nt[0].pitch - 0.5f, ph1 = 0, ph2 = 0, ph3 = 0, de = 0, lpv = 0, lpn = 0;
+        float vo = 0, no = 0, gs = 0, prevv = 0, pv = 0, drift = 0, vr = st->vibr, vph = 0, jf = 1, sh = 1, G = 0, cnt = 0;
         float tstart = sg[0].t0 - 0.02f, tend = sg[nsg - 1].t1 + 0.05f;
+        int nlast = 0;
+        /* the line's sung level: the mean of its vowels (speech stress is flattened around it) */
+        for (i = 0; i < nsg; i++) if (sg[i].kind) { G += sg[i].gm; cnt += 1; }
+        G = G / (cnt + 1e-6f) + 1e-6f;
         int n0 = (int)(tstart * isr), n1 = (int)(tend * isr), n, si = 0, ni = 0;
         float *buf; int blen = n1 - n0 + 8;
         static float vbuf[16000 * 60];
@@ -240,9 +263,17 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                         for (i = 0; i < 16; i++) lsf[i] += (vf_l[k2][i] - lsf[i]) * wgt;
                     }
                 }
+                if (kind && t > c->t0 && t < c->t1) {   /* a held note sustains at its vowel's level, with a slight decay */
+                    float D = c->t1 - c->t0, x2 = t - c->t0, h = (x2 - 0.03f) / 0.05f, h2 = (D - x2 - 0.04f) / 0.06f;
+                    h = h < 0 ? 0 : h > 1 ? 1 : h; h2 = h2 < 0 ? 0 : h2 > 1 ? 1 : h2;
+                    g += (G * powf(c->gm / G + 1e-9f, VSUS) - g) * h * h2;   /* near the line's level: sung, not spoken, stress */
+                    g *= 1 - 0.12f * (x2 > 0.3f ? (x2 - 0.3f < 1.5f ? (x2 - 0.3f) / 1.5f : 1) : 0);
+                }
+                g = G * powf(g / G + 1e-9f, VCMP);        /* sung phrasing: stress contrasts compressed */
                 if (t < sg[0].t0 || t > sg[nsg - 1].t1) g = 0;
-                /* sung diction: consonants are articulated harder than in speech */
-                { static const float CB[8] = { 1.0f, 1.25f, 1.7f, 1.9f, 1.8f, 1.5f, 1.8f, 1.6f }; g *= CB[VCLS(fl)]; }
+                /* sung diction: consonants are articulated harder than in speech (sibilants gently) */
+                { static const float CB[2][8] = { { 1.0f, 1.25f, 1.7f, 1.9f, 1.6f, 1.5f, 1.8f, 1.6f }, { 1.0f, 1.2f, 1.55f, 1.65f, 1.35f, 1.3f, 1.5f, 1.4f } };
+                  g *= CB[VCB][VCLS(fl)]; }
                 switch (VCLS(fl)) {
                 case 0: case 1: tv = 1; tn = st->breath; break;
                 case 2: tv = 0.35f; tn = 0.8f; break;
@@ -257,17 +288,35 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                     wv *= VMORPH * (D > 0.12f ? 1 : D / 0.12f);
                     for (i = 0; i < 16; i++) lsf[i] += (vt_l[fl & 15][i] - lsf[i]) * wv;
                 }
+                {   /* high notes: the first formant follows the pitch (as a soprano opens her jaw) */
+                    float f1 = (lsf[0] + lsf[1]) * 0.5f * isr / 6.2831853f, need = prevv * 1.05f;
+                    if (VFT && tv > 0.5f && prevv > 470.0f && f1 < need) { float dl = (need - f1) * 3.7f / isr; if (dl > 0.15f) dl = 0.15f; lsf[0] += dl; lsf[1] += dl * 0.8f; }
+                }
                 lsf_fix(lsf); lsf2poly(lsf, a);
+                {   /* and the resonances widen, so sparse harmonics never ring on a narrow peak */
+                    float hp = (prevv - 420.0f) / 250.0f, gm = 1, gg;
+                    hp = hp < 0 ? 0 : hp > 1 ? 1 : hp;
+                    gg = 1 - VBW * hp;
+                    for (i = 0; i < 16; i++) { gm *= gg; a[i] *= gm; }
+                }
                 gs = g;
                 vo += (tv - vo) * 0.35f; no += (tn - no) * 0.35f;
                 /* pitch */
-                while (ni + 1 < nn && t >= nt[ni + 1].start - 0.015f) ni++;
+                while (ni + 1 < nn && t >= nt[ni + 1].start - (VGL ? 0.04f : 0.015f)) ni++;   /* the voice anticipates the next note */
                 {
-                    float tg = nt[ni].pitch, dt = t - nt[ni].start, vib;
-                    pit += (tg - pit) * 0.16f;
-                    jit += (vrnd() * 0.5f - jit) * 0.02f;
-                    vib = dt > 0.18f ? st->vibd * (dt - 0.18f < 0.4f ? (dt - 0.18f) * 2.5f : 1.0f) * sinf(6.2831853f * st->vibr * t) : 0;
-                    prevv = 440.0f * exp2f((pit + vib + jit * 0.06f - 69.0f) / 12.0f);
+                    float tg = nt[ni].pitch, dt = t - nt[ni].start, vib, vd, cr = 16.0f / isr;
+                    if (VGL && ni != nlast) {              /* after a rest the note is approached from a little below */
+                        if (nt[ni].start - (nt[nlast].start + nt[nlast].dur) > 0.2f) { pit = tg - 0.4f; pv = 0; }
+                        nlast = ni;
+                    }
+                    if (VGL) { pv += (1800.0f * (tg - pit) - 60.0f * pv) * cr; pit += pv * cr; }   /* a smooth glide with a hint of overshoot */
+                    else pit += (tg - pit) * 0.16f;
+                    drift += (vrnd() * 0.12f - drift) * 0.004f;             /* slow wander, a few cents */
+                    vr += (st->vibr * (1 + 0.08f * vrnd()) - vr) * 0.003f;   /* the vibrato is never quite regular */
+                    vph += 6.2831853f * vr * cr;
+                    vd = dt < 0.22f ? 0 : dt < 0.72f ? (dt - 0.22f) * 2 : 1;
+                    vib = st->vibd * vd * (0.85f + 0.15f * sinf(t * 1.7f + vph * 0.05f)) * sinf(vph);
+                    prevv = 440.0f * exp2f((pit + vib + drift - 69.0f) / 12.0f);
                 }
                 if (mouth) {
                     int mi = (int)(t * 100);
@@ -281,8 +330,8 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
             }
             /* excitation: band-limited pulse train(s) */
             {
-                float f0 = prevv, v = 0, nz, H;
-                ph1 += f0 / isr; if (ph1 >= 1) ph1 -= 1;
+                float f0 = prevv * jf, v = 0, nz, H, tl;
+                ph1 += f0 / isr; if (ph1 >= 1) { ph1 -= 1; jf = 1 + 0.004f * vrnd(); sh = 1 + 0.035f * vrnd(); }   /* jitter, shimmer */
                 H = floorf(isr * 0.5f / f0);
                 {
                     float p2 = ph1 * 6.2831853f, d = sinf(p2 * 0.5f);
@@ -300,7 +349,9 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                     p2 = ph3 * 6.2831853f; d = sinf(p2 * 0.5f);
                     v += st->dual * (fabsf(d) < 1e-5f ? H2 : sinf((H2 + 0.5f) * p2) / (2 * d) - 0.5f) * sqrtf(2.0f / H2);
                 }
-                lpv += (v - lpv) * st->tilt;
+                v *= sh;
+                tl = (prevv - 330.0f) / 300.0f; tl = st->tilt * (1 - 0.3f * (tl < 0 ? 0 : tl > 1 ? 1 : tl));   /* softer at the top */
+                lpv += (v - lpv) * tl;
                 nz = vrnd() * 1.732f;
                 lpn += (nz - lpn) * 0.9f;
                 if (MELP > 0) {   /* mixed excitation: periodic below ~4 kHz, pulse-gated noise above */
@@ -308,7 +359,7 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                     hl += (lpv - hl) * 0.6f; hn += (nz - hn) * 0.6f;
                     lpv = hl + (lpv - hl) * (1 - MELP) + (nz - hn) * MELP * (ph1 < 0.35f ? 1.6f : 0.4f);
                 }
-                x = vo * lpv * (st->tilt < 1 ? 1.0f / sqrtf(st->tilt) : 1.0f) + no * lpn * (vo > 0.5f ? (0.4f + 0.6f * (ph1 < 0.5f)) : 1.0f);
+                x = vo * lpv * (tl < 1 ? 1.0f / sqrtf(tl) : 1.0f) + no * lpn * (vo > 0.5f ? (0.4f + 0.6f * (ph1 < 0.5f)) : 1.0f);
             }
             x *= gs;
             {

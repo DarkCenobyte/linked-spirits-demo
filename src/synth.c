@@ -434,6 +434,15 @@ static void th_voice(void *u)
 }
 
 /* ------------------------------------------------------------------ mixdown */
+#ifndef PRES
+#define PRES 1.0f       /* vocal presence around 3 kHz */
+#endif
+#ifndef DEESS
+#define DEESS 0
+#endif
+#ifndef DIST
+#define DIST 1          /* the distant voice: corridor treatment */
+#endif
 #define RVN 8
 #define VG 6.5f
 static float *rvbuf;
@@ -441,8 +450,10 @@ static void th_mix(void)
 {
     static const int RL[RVN] = { 1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116 };
     int i, k, ki = 0, rp = 0;
-    float rs[RVN] = { 0 }, *rv[RVN], dl[2] = { 0 }, dlf[2] = { 0 }, lim = 1, env_v = 0, env_k = 0, bfl[4] = { 0 };
-    SVF vf[7] = { { 0 } };
+    float rs[RVN] = { 0 }, *rv[RVN], dl[2] = { 0 }, dlf[2] = { 0 }, lim = 1, env_v = 0, env_k = 0, bfl[4] = { 0 }, vfar;
+    static float cor[4096]; int cj = 0;          /* corridor flutter echo for the distant voice */
+    SVF vf[8] = { { 0 } };
+    float eh = 0, ea = 0;                        /* de-esser envelopes */
     float *dly = rvbuf + RVN * 8192; int dlen = SPT * 3;
     for (k = 0; k < RVN; k++) rv[k] = rvbuf + k * 8192;
     for (i = 0; i < SONG_LEN; i++) {
@@ -457,7 +468,13 @@ static void th_mix(void)
         env_v += (x > env_v ? 0.002f : 0.00004f) * (x - env_v);
         duck = 1 / (1 + 12 * env_v);
         /* the cyborg: far away (break), behind doors (search), then the room itself sings with her */
-        if (bar >= 36 && bar < 54 && !(bar >= 46 && bar < 50)) vb = svf(&vf[0], svf(&vf[1], vb, fcut(2600), 1.2f, 0), fcut(350), 1.0f, 2) * 0.6f;
+        vfar = 0;
+        if (DIST && bar >= 36 && bar < 54 && !(bar >= 46 && bar < 50)) {   /* far down the corridor: darker, quieter, echoing */
+            float e1 = cor[(cj + 4096 - 3080) & 4095], e2 = cor[(cj + 4096 - 1930) & 4095];
+            vfar = svf(&vf[0], svf(&vf[1], vb, fcut(3800), 0.9f, 0), fcut(220), 0.9f, 2);
+            cor[cj] = vfar + e1 * 0.36f + e2 * 0.14f; cj = (cj + 1) & 4095;
+            vb = vfar * 0.55f + (e1 + e2) * 0.13f;
+        }
         if (bar >= 56 && bar < 70) vb = svf(&vf[0], vb, fcut(3200 + (bar == 69 ? 4000 * (t - 69 * 2.4f) : 0)), 0.9f, 0) * 0.85f;
         L = trk[T_DRUM][i] * 0.4f * (0.45f + 0.55f * duck) + trk[T_BASS][i] * 0.5f * sc * (0.6f + 0.4f * duck);
         R = L;
@@ -472,11 +489,17 @@ static void th_mix(void)
             mr -= svf(&vf[5], mr, fcut(2600), 1.0f, 1) * 0.85f * pres;
             L += ml; R += mr;
             sendD = (cl + cr) * 0.35f + va * (bar == 30 ? 1.2f : 0.03f) + vb * 0.04f;
-            sendR = (cl + cr) * 0.25f + (bl + br) * 0.3f + va * 0.12f * VG + vb * (bar >= 70 && bar < 104 ? 0.3f : 0.2f) * VG + trk[T_DRUM][i] * 0.05f;
+            sendR = (cl + cr) * 0.25f + (bl + br) * 0.3f + va * 0.12f * VG + vb * (bar >= 70 && bar < 104 ? 0.3f : 0.2f) * VG + vfar * 0.75f * VG + trk[T_DRUM][i] * 0.05f;
         }
-        {   /* vocal presence: +6 dB around 3 kHz for the consonants */
+        {   /* vocal presence: +5 dB around 3 kHz for the consonants */
             float vv = va * 0.95f + vb * 0.9f;
-            vv += svf(&vf[6], vv, fcut(3000), 1.4f, 1) * 1.0f;
+            vv += svf(&vf[6], vv, fcut(3000), 1.4f, 1) * PRES;
+            if (DEESS) {   /* de-esser: the sibilant band never exceeds a third of the voice */
+                float hs = svf(&vf[7], vv, fcut(5200), 0.8f, 2), red;
+                eh += (fabsf(hs) - eh) * 0.003f; ea += (fabsf(vv) - ea) * 0.003f;
+                red = eh > 0.33f * ea ? 0.33f * ea / (eh + 1e-9f) : 1;
+                vv -= hs * (1 - red);
+            }
             L += vv * VG; R += vv * VG;
         }
         /* ping-pong delay, dotted eighth */
