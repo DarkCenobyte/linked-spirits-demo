@@ -5,13 +5,14 @@
 #define RW 1920
 #define RH 816                    /* 2.35:1 cinema frame */
 #define NBLOOM 6
-#define NU 40                     /* vec4 uniforms shared by every program */
+#define NU 64                     /* vec4 uniforms shared by every program */
 
 enum { PR_LAB, PR_CATH, PR_SPACE, PR_PART, PR_DOWN, PR_UP, PR_FINAL, NPROG };
 
 static GLuint prog[NPROG], tex_col, tex_dep, tex_text, bl[NBLOOM], fb_scene, fb_part, fb_bl[NBLOOM], fb_out, vao;
 static float U[NU * 4];
 static GLuint preview_fbo;
+static void (*preview_hook)(float *);
 #include "director.c"
 static int scr_w, scr_h;
 
@@ -70,7 +71,7 @@ static GLuint mk_prog(GLuint vs, GLuint fs)
 static void demo_init(int sw, int sh)
 {
     int i, w = RW, h = RH;
-    const char *src[4];
+    const char *src[5];
     GLuint vs_full, vs_part;
     scr_w = sw; scr_h = sh;
     glCreateVertexArrays(1, &vao);
@@ -94,14 +95,15 @@ static void demo_init(int sw, int sh)
     vs_full = mk_shader(GL_VERTEX_SHADER, src, 2);
     src[1] = sh_vpart;
     vs_part = mk_shader(GL_VERTEX_SHADER, src, 2);
-    src[1] = sh_lib;
-    src[3] = sh_scene;
+    src[2] = sh_lib;
+    src[3] = sh_char;
+    src[4] = sh_scene;
     for (i = 0; i < 3; i++) {
         static const char *const defs[3] = { "#define S_LAB\n", "#define S_CATH\n", "#define S_SPACE\n" };
-        src[2] = defs[i];
-        prog[i] = mk_prog(vs_full, mk_shader(GL_FRAGMENT_SHADER, src, 4));
+        src[1] = defs[i];
+        prog[i] = mk_prog(vs_full, mk_shader(GL_FRAGMENT_SHADER, src, 5));
     }
-    src[2] = "";
+    src[1] = "";
     src[3] = sh_fpart;
     prog[PR_PART] = mk_prog(vs_part, mk_shader(GL_FRAGMENT_SHADER, src, 4));
     src[2] = sh_post; src[1] = "#define DOWN\n";
@@ -122,6 +124,7 @@ static void demo_frame(float t)
 {
     int i, w, h, np;
     int sc = direct(t, U);                    /* director fills U, returns scene program */
+    if (preview_hook) sc = (preview_hook(U), sc);
     /* 1: scene */
     glBindFramebuffer(GL_FRAMEBUFFER, fb_scene);
     glViewport(0, 0, RW, RH);

@@ -29,6 +29,13 @@ static void (APIENTRYP glFinish)(void);
 #include "demo.c"
 
 static void *getp(const char *n) { return (void *)eglGetProcAddress(n); }
+static void hook(float *u)
+{   /* U<n>="x y z w" environment overrides for look development */
+    for (int i = 0; i < NU; i++) {
+        char k[16]; const char *v; sprintf(k, "U%d", i);
+        if ((v = getenv(k))) sscanf(v, "%f %f %f %f", u + i * 4, u + i * 4 + 1, u + i * 4 + 2, u + i * 4 + 3);
+    }
+}
 
 static void load_text(void)
 {
@@ -89,6 +96,7 @@ int main(int argc, char **argv)
         int W = (int)(RW * scale), H = (int)(RH * scale), fi = 0;
         GLuint fbo, ct; unsigned char *px = malloc(W * H * 3);
         synth_timeline_only();
+        preview_hook = hook;
         demo_init(W, H);
         load_text();
         glCreateTextures(GL_TEXTURE_2D, 1, &ct);

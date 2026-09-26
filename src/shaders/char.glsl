@@ -1,0 +1,129 @@
+// ---- characters: heads, faces, eyes ------------------------------------------
+// head space: origin at the centre of the head at eye height, +z = face forward, +y up.
+// material ids: 1 composite skin, 2 eye, 3 metal, 4 lip, 5 emissive, 6 cable, 7 worn composite
+float gM;             // material of the last evaluated sdf
+float eyeBall(vec3 e);
+vec3 gEyeC;           // centre of the closest eye (head space)
+float gEyeSide;       // -1 right eye (image left when facing camera), +1 left eye
+#define ER .0132      // eyeball radius
+#define EC vec3(.033,0,.0648) // eye centre (right side, mirrored)
+#define KU 2030.
+#define KL 1680.
+
+// groove of width w and depth dp carved into a surface d along the zero set of g
+float groove(float d,float g,float w,float dp){return max(d,min(w-abs(g),d+dp));}
+
+// face parameters: blink (0 open .. 1 closed), mouth open, mouth round, style (0 android, 1 cyborg)
+float face(vec3 p,float blink,float mo,float mr,float sty){
+ vec3 q=p;q.x=abs(q.x);
+ // helmet-like cranium and an oval face mask tapering to the chin
+ float d=ell(p-vec3(0,.03,-.02),vec3(.067,.085,.09));
+ d=smin(d,ell(p-vec3(0,-.008,.024),vec3(.062,.089,.066)),.025);
+ // jaw: two planes converging to the chin (V line), a defined underside, a small chin
+ d=smax(d,dot(q-vec3(.05,-.056,.03),normalize(vec3(1,-.65,.28))),.018);
+ d=smax(d,dot(p-vec3(0,-.093-mo*.006,.05),normalize(vec3(0,-1,.4))),.01);
+ d=smin(d,ell(p-vec3(0,-.079-mo*.007,.055),vec3(.02+.002*sty,.013,.016)),.012);
+ // planes: forehead, cheeks, temples (sculpted rather than round)
+ d=smax(d,dot(p-vec3(0,.04,.082),normalize(vec3(0,.28,1))),.03);
+ d=smax(d,dot(q-vec3(.05,-.024,.057),normalize(vec3(1,-.08,.62)))-.002*sty,.024);
+ d=smax(d,q.x-.066,.014);
+ // barely-there eye sockets
+ d=smax(d,-ell(q-vec3(.033,.008,.086),vec3(.019,.009,.007)),.014);
+ // face plate seam: over the forehead, down in front of the ears, under the jaw
+ float g=(p.z-.033-.4*p.y-2.*p.y*p.y)*.9;
+ d=groove(d,g,.0007,.0012);
+ // cranial plates: central seam and a transverse seam over the crown
+ if(g<-.004){d=groove(d,q.x,.0006,.001);d=groove(d,p.z+.02-p.y*.12,.0006,.001);}
+ // lips: a subtle bulge, a fine crease
+ float mw=.0148-mr*.005;
+ d=smin(d,ell(p-vec3(0,-.047-mo*.004,.077-mr*.001),vec3(mw+.001,.0055+mo*.004,.006+mr*.003)),.005);
+ float sl=ell(p-vec3(0,-.047-mo*.0045,.093),vec3(mw,.0005+mo*.006+mr*.002,.02));
+ d=smax(d,-sl,.0015);
+ gM=abs(p.y+.049+mo*.0045)<.003+mo*.005&&q.x<mw-.001&&p.z>.07?4.:1.;
+ // eyelids: shells around the eyeballs, opened by angular planes (almond shaped)
+ vec3 e=q-EC;
+ float le=length(e),sh=abs(le-ER-.0014)-.0011,sl2=abs(le-ER-.0009)-.0007;
+ float au=mix(.5,-.2,blink)-KU*e.x*e.x+7.*e.x, al=-.42+KL*e.x*e.x+7.*e.x;
+ float lu=smax(sh,-dot(e,vec3(0,cos(au),-sin(au))),.0009);
+ float lo=smax(sl2,dot(e,vec3(0,cos(al),-sin(al))),.0007);
+ float lid=max(min(lu,lo),-e.z-.006);
+ d=smin(d,lid,.004);
+ // eyeballs (real, un-mirrored side so the gaze is shared)
+ gEyeSide=sign(p.x+1e-6);
+ gEyeC=EC*vec3(gEyeSide,1,1);
+ float eb=eyeBall(p-gEyeC);
+ if(eb<d){d=eb;gM=2.;}
+ // ear modules (headphone-like), crown bolts
+ vec3 eq=(q-vec3(.063,-.008,-.012)).yxz;
+ float ear=max(cyl(eq,.021,.006)-.0015,-cyl(eq-vec3(0,.007,0),.013,.003));
+ ear=min(ear,cyl(eq,.009,.0075)-.001);
+ float bo=sph(q-vec3(.02,.103,.018),.0022);
+ if(min(ear,bo)<d){d=min(ear,bo);gM=3.;}
+ return d;
+}
+// neck + head, head space
+float headNeck(vec3 p,float blink,float mo,float mr,float sty){
+ float d=face(p,blink,mo,mr,sty);
+ float n=capr(p,vec3(0,-.07,-.034),vec3(0,-.19,-.018),.046,.05);
+ float nm=gM;
+ d=smin(d,n,.012);
+ if(n<d+.001&&p.y<-.08)gM=1.;
+ return d;
+}
+
+// ---- body: skeleton joints in U[B..B+19] (world space) ----------------------------
+// segment with gaps at the joints so the metal articulations show
+float seg(vec3 p,vec3 a,vec3 b,float ra,float rb,float ga,float gb){
+ vec3 d=normalize(b-a);return capr(p,a+d*ga,b-d*gb,ra,rb);}
+float hand(vec3 p,vec3 W,vec3 H,vec3 pn,float curl){
+ vec3 hx=normalize(H-W),hz=normalize(pn-hx*dot(pn,hx)),hy=cross(hz,hx);
+ vec3 l=vec3(dot(p-W,hx),dot(p-W,hy),dot(p-W,hz));
+ float d=box(l-vec3(.052,0,0),vec3(.042,.036,.011),.01);
+ for(int i=0;i<4;i++){
+  float fi=float(i),y=(fi-1.5)*.0185,L=(.042+.006*(1.-abs(fi-1.3)*.5));
+  vec3 a=vec3(.092,y,.0),b=a+vec3(cos(curl*.9),0,-sin(curl*.9))*L;
+  vec3 c=b+vec3(cos(curl*1.9),0,-sin(curl*1.9))*L*.8;
+  d=smin(d,min(cap(l,a,b,.0082),cap(l,b,c,.0072)),.006);
+ }
+ vec3 t0=vec3(.025,.035,-.005),t1=t0+normalize(vec3(.5,.55,-.35))*.04,t2=t1+normalize(vec3(.9,.25,-.3-curl*.5))*.032;
+ d=smin(d,min(cap(l,t0,t1,.011),cap(l,t1,t2,.0085)),.008);
+ return d;
+}
+float body(vec3 p,int B){
+ vec3 pel=U[B].xyz,chs=U[B+1].xyz,nk=U[B+2].xyz,hd=U[B+3].xyz;
+ float bb=length(p-pel-(chs-pel)*.3)-1.05;
+ if(bb>.05)return bb;
+ vec3 up=normalize(chs-pel),sd=normalize(U[B+4].xyz-U[B+8].xyz),fw=normalize(cross(sd,up));
+ sd=cross(up,fw);
+ vec3 tp=vec3(dot(p-pel,sd),dot(p-pel,up),dot(p-pel,fw)),tq=vec3(abs(tp.x),tp.yz);
+ float m=1.;
+ float d=ell(tp-vec3(0,.0,-.01),vec3(.16,.12,.1));                 // hips
+ d=smin(d,ell(tp-vec3(0,.17,0),vec3(.11,.12,.075)),.07);           // waist
+ d=smin(d,ell(tp-vec3(0,.33,0),vec3(.145,.13,.09)),.06);           // rib cage
+ d=smin(d,ell(tq-vec3(.058,.31,.062),vec3(.052,.05,.042)),.03);     // bust
+ d=smin(d,capr(tq,vec3(.02,.44,-.01),vec3(.15,.425,-.01),.052,.045),.05);  // shoulders
+ d=smin(d,capr(p,nk-up*.02,hd-up*.085,.05,.046),.025);             // neck
+ // neck ring (metal) + a green identity light
+ float nr=tor(vec3(dot(p-nk,sd),dot(p-nk,up)-.045,dot(p-nk,fw)),.049,.005);
+ if(nr<d){d=nr;m=3.;}
+ for(int s=0;s<2;s++){
+  int o=B+4+s*4;
+  vec3 S=U[o].xyz,E=U[o+1].xyz,W=U[o+2].xyz,H=U[o+3].xyz;
+  float a=seg(p,S,E,.041,.032,.05,.03);
+  a=min(a,seg(p,E,W,.03,.022,.03,.018));
+  if(length(p-W)<.2)a=min(a,hand(p,W,H,U[60+s].xyz,U[60+s].w));
+  d=smin(d,a,.012);
+  float jn=min(sph(p-S,.044),min(sph(p-E,.027),sph(p-W,.018)));
+  o=B+12+s*4;
+  vec3 Hp=U[o].xyz,K=U[o+1].xyz,A=U[o+2].xyz,To=U[o+3].xyz;
+  float g=seg(p,Hp,K,.074,.047,0.,.04);
+  g=min(g,seg(p,K,A,.045,.028,.035,.02));
+  vec3 fd=normalize(To-A);
+  g=smin(g,capr(p,A+fd*.01+vec3(0,-.035,0),To+vec3(0,.012,0),.026,.02),.02);
+  d=smin(d,g,.025);
+  jn=min(jn,min(sph(p-K,.042),sph(p-A,.026)));
+  if(jn<d){d=jn;m=3.;}
+ }
+ gM=m;
+ return d;
+}

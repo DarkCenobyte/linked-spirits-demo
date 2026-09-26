@@ -3,7 +3,7 @@
 import os, sys, re
 HERE = os.path.dirname(os.path.abspath(__file__))
 SD = os.path.join(HERE, '..', 'src', 'shaders')
-NAMES = ['head', 'vfull', 'vpart', 'lib', 'scene', 'fpart', 'post']
+NAMES = ['head', 'vfull', 'vpart', 'lib', 'char', 'scene', 'fpart', 'post']
 def cstr(s):
     s = s.replace('\\', '\\\\').replace('"', '\\"')
     return '\n'.join('"%s\\n"' % l for l in s.split('\n'))
