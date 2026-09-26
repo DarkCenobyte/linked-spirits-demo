@@ -20,9 +20,15 @@ the same.
 
 * Windows 10/11 x64, a GPU with OpenGL 4.6 (a recent discrete GPU is
   recommended; the scenes are heavy raymarching).
-* Prebuilt binaries are in [`release/`](release/): `linked_spirits_upx.exe`
-  (UPX-packed, the one to run) and `linked_spirits.exe` (the same program,
-  unpacked). Both run fullscreen at the desktop resolution, 2.35:1 letterbox.
+* Prebuilt binaries are in [`release/`](release/), all the same film:
+  * `linked_spirits32_kkrunchy.exe`: the smallest (32-bit, kkrunchy);
+  * `linked_spirits_squishy.exe`: the smallest 64-bit (squishy);
+  * `linked_spirits_upx.exe`: 64-bit, UPX;
+  * `linked_spirits.exe`: 64-bit, unpacked.
+
+  They run fullscreen at the desktop resolution, 2.35:1 letterbox. Packed
+  executables (kkrunchy and squishy especially) are sometimes flagged by
+  antivirus heuristics; the unpacked one never needs unpacking.
 * **Escape quits immediately**, during the loading line and during the film.
 * Loading takes around ten seconds: worker threads render the whole soundtrack
   (music + voices) into memory, and a short benchmark of the heaviest shots
@@ -33,10 +39,34 @@ the same.
 
 ## Size
 
-| file | bytes |
-|---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 227 328 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **99 840** (97.5 KiB) |
+| file | packer | bytes |
+|---|---|---|
+| `linked_spirits32_kkrunchy.exe` | kkrunchy_k7 0.23a4 `--best` (32-bit) | **75 776** (74 KiB) |
+| `linked_spirits_squishy.exe` | squishy 0.2.0 (64-bit) | **79 872** (78 KiB) |
+| `linked_spirits_upx.exe` | UPX 4.2.2 `--best --ultra-brute --lzma` (64-bit) | 98 816 |
+| `linked_spirits.exe` | none (64-bit, CRT-free) | 226 304 |
+
+Every packer that was tried, on the same program (compatible pairs only: each
+packer takes the plain executable or, for Crinkler, the object file):
+
+| target | packer | bytes | notes |
+|---|---|---|---|
+| 32-bit | kkrunchy_k7 `--best` | **75 776** | runs; unpacks in about a second |
+| 32-bit | Crinkler 2.3 `/COMPMODE:SLOW` | 79 840 | compressing linker made for 4k-8k; even a 495-byte Crinkler test does not start under Wine, so it could not be verified; Crinkler 3.0b refuses a code part above 64 KB |
+| 64-bit | squishy 0.2.0 | **79 872** | runs; x86-64 only since 0.2.0 |
+| 32-bit | UPX `--ultra-brute` | 93 184 | |
+| 64-bit | UPX `--ultra-brute` | 98 816 | `--best --lzma` alone: 99 840 |
+
+The compiler settings matter as much as the packer, and differently for each:
+x87 floating point instead of SSE makes denser code (-1 KB with UPX, -0.6 KB
+with squishy, -1 KB with kkrunchy), and plain i386 code instead of Nehalem
+saves another 1 KB with kkrunchy. The x87 soundtrack was checked against the
+SSE one: same loudness to 0.06 dB on average, and the sung lyrics come back as
+well (word error rate 6.5% vs 7.2%). 32-bit code is denser than x86-64 (no REX
+prefixes, 4-byte pointers), which is why the smallest build is 32-bit.
+Importing DLL functions by hash is already what kkrunchy, squishy and Crinkler
+do; with UPX it would save a few hundred bytes at most (the OpenGL functions
+have to be looked up by name anyway).
 
 Artistic quality came first. At 77.5 KiB, going under 64 KiB would have
 meant cutting the voice bank and with it the intelligibility of the singing,
@@ -63,7 +93,8 @@ Lossless savings (the image and the sound are unchanged):
   move smoothly; the others are noise-like and pack better as plain values
   (≈ 1 KB; the rendered soundtrack is bit-identical);
 * the release shaders leave out the look-development test mode;
-* the exe has a fixed base and no relocation table.
+* the exe has a fixed base and no relocation table;
+* x87 floating point instead of SSE (see above).
 
 Where the packed bytes go (LZMA estimates):
 
@@ -270,9 +301,18 @@ Requirements: `x86_64-w64-mingw32-gcc` (GCC 13), `upx`, `python3`.
 
 ```sh
 ./build.sh            # build/linked_spirits.exe and build/linked_spirits_upx.exe
+tools/pack.sh         # build/linked_spirits_squishy.exe and build/linked_spirits32_kkrunchy.exe
 ./build.sh debug      # build/linked_spirits_debug.exe, logs to debug.log
 ./build.sh data       # regenerate src/gen_score.h and src/gen_voice.h
 ```
+
+`tools/pack.sh` also needs `i686-w64-mingw32-gcc`, Wine with 32-bit support,
+squishy (`SQUISHY=.../squishy-x64.exe`, from logicoma) and kkrunchy
+(`KKRUNCHY=.../kkrunchy_k7.exe`). kkrunchy has no binary release; it was
+written for Visual Studio, and `tools/kkrunchy_gcc.py <fr_public/kkrunchy_k7>
+<dir>` builds it with MinGW-w64 instead (replacing its MSVC inline assembly and
+its PDB reader; it needs NASM 2.10, as the RDF output of later versions is
+broken).
 
 `./build.sh data` needs the voice toolchain: `sherpa-onnx` (Python) with the
 Kokoro `kokoro-en-v0_19` model (`KOKORO_DIR`), `espeak-ng`, and `mbrola` with
@@ -301,4 +341,4 @@ CAMH="0 0 .8 30" build/preview frames 50 50 1 out   # camera relative to her hea
 | `src/synth.c`, `src/voice.c` | music synthesis and singing-voice synthesis |
 | `src/shaders/*.glsl` | shaders (embedded by `tools/embed_shaders.py`) |
 | `src/gen_score.h`, `src/gen_voice.h` | generated data: score and voice bank (`src/gen_shaders.h` is written by every `build.sh` run) |
-| `tools/` | score, voice bank builder, minifier, Whisper tests |
+| `tools/` | score, voice bank builder, minifier, Whisper tests, packing (`pack.sh`, `kkrunchy_gcc.py`) |

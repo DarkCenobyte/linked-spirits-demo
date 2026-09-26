@@ -545,10 +545,11 @@ static void th_mix(void)
 typedef void (*thfn)(void *);
 static const thfn workers[5] = { th_voice, th_bed, th_chip, th_drums, th_bass };
 #ifdef _WIN32
+static DWORD WINAPI th_run(LPVOID f) { ((thfn)f)(0); return 0; }   /* the thread calling convention (it matters in 32-bit) */
 static DWORD WINAPI synth_main(LPVOID u)
 {
     int i; (void)u;
-    for (i = 0; i < 5; i++) CreateThread(0, 0, (LPTHREAD_START_ROUTINE)workers[i], 0, 0, 0);
+    for (i = 0; i < 5; i++) CreateThread(0, 0, th_run, (LPVOID)workers[i], 0, 0);
     while (synth_ndone < 5) Sleep(10);
     th_mix();
     __sync_fetch_and_add(&synth_ndone, 1);

@@ -1,5 +1,8 @@
 /* LINKED//SPIRITS - Windows x64 entry point (no CRT). */
 #define WIN32_LEAN_AND_MEAN
+#ifndef TEXTDATA
+#define TEXTDATA                /* the Crinkler build gives text data a section of its own */
+#endif
 #include <windows.h>
 #include <mmsystem.h>
 #include <GL/glcorearb.h>

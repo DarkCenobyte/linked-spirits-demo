@@ -13,7 +13,7 @@ if [ "$1" = "preview" ]; then
   exit 0
 fi
 python3 tools/embed_shaders.py -m
-CFLAGS="-Oz -s -march=x86-64-v2 -mfpmath=sse -ffast-math -fno-math-errno -fno-asynchronous-unwind-tables \
+CFLAGS="-Oz -s -march=x86-64 -mfpmath=387 -ffast-math -fno-math-errno -fno-asynchronous-unwind-tables \
  -fno-stack-protector -fno-ident -ffunction-sections -fno-builtin-memset -fno-builtin-memcpy -fno-tree-loop-distribute-patterns \
  -fomit-frame-pointer -fno-unwind-tables -fmerge-all-constants"
 x86_64-w64-mingw32-gcc $CFLAGS -include src/mathx.h -nostdlib -nostartfiles -Wl,-e,entry -Wl,--gc-sections \

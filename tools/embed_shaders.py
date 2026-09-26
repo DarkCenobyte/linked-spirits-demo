@@ -29,7 +29,7 @@ def main(minify=False):
         srcs = {n: open(os.path.join(SD, n + '.glsl')).read() for n in NAMES}
     for n in NAMES:
         s = srcs[n]; tot += len(s)
-        out.append('static const char sh_%s[] =\n%s;' % (n, cstr(s)))
+        out.append('static const char sh_%s[] TEXTDATA =\n%s;' % (n, cstr(s)))
     open(os.path.join(HERE, '..', 'src', 'gen_shaders.h'), 'w').write('\n'.join(out) + '\n')
     print('shaders: %d bytes%s' % (tot, ' (minified)' if minify else ''))
 if __name__ == '__main__':

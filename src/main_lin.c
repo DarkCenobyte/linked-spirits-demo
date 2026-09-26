@@ -5,6 +5,9 @@
  *   preview audio <out.wav>
  */
 #define _GNU_SOURCE
+#ifndef TEXTDATA
+#define TEXTDATA                /* the Crinkler build gives text data a section of its own */
+#endif
 #include <EGL/egl.h>
 #include <GL/glcorearb.h>
 #include <stdio.h>
