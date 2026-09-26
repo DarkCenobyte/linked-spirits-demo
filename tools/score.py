@@ -218,6 +218,7 @@ arr(168, 181, drone=1)                                # return
 arr(172, 181, gran=1)
 arr(174, 181, pad=1)
 arr(180, 188, pad=2, gran=2, drone=0)
+arr(182, 186, pad=1, gran=1)                          # the merged voice, almost alone
 
 # one-shot sound events: (bar, 16th, kind, param)
 FX = [
