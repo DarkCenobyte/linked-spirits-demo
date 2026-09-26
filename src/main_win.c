@@ -14,6 +14,7 @@ WINGDIAPI void APIENTRY glDisable(GLenum);
 WINGDIAPI void APIENTRY glBlendFunc(GLenum, GLenum);
 WINGDIAPI void APIENTRY glClear(GLbitfield);
 WINGDIAPI void APIENTRY glClearColor(GLfloat, GLfloat, GLfloat, GLfloat);
+WINGDIAPI void APIENTRY glFinish(void);
 WINGDIAPI void APIENTRY glScissor(GLint, GLint, GLsizei, GLsizei);
 WINGDIAPI GLenum APIENTRY glGetError(void);
 WINGDIAPI void APIENTRY glReadPixels(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
