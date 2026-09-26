@@ -106,6 +106,7 @@ int main(int argc, char **argv)
         synth_timeline_only();
         preview_hook = hook;
         demo_init(W, H);
+        if (!getenv("FULLRES")) targets(W, H);   /* render internally at the output size (the adaptive path) */
         load_text();
         glCreateTextures(GL_TEXTURE_2D, 1, &ct);
         glTextureStorage2D(ct, 1, GL_RGB8, W, H);

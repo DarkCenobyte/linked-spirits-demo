@@ -100,8 +100,8 @@ void main(){
  vec3 v=p-cp;float z=dot(v,fw),th=tan(radians(U[1].w)*.5);
  gl_Position=z>.01?vec4(dot(v,rt)/(th*2.353),dot(v,up)/th,0,z):vec4(2,2,2,1);
  pdist=length(v);
- float px=sz/(z*th)*408.;                        // radius in pixels at 816 lines
- float coc=U[3].y*816.*abs(pdist-U[3].x)/max(pdist,.01);
+ float px=sz/(z*th)*U[0].z*.5;                  // radius in pixels (U[0].z: internal height)
+ float coc=U[3].y*U[0].z*abs(pdist-U[3].x)/max(pdist,.01);
  float s=max(max(px,coc),1.);
  psz=s;
  gl_PointSize=s*2.;

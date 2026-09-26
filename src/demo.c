@@ -14,7 +14,7 @@ static float U[NU * 4];
 static GLuint preview_fbo;
 static void (*preview_hook)(float *);
 #include "director.c"
-static int scr_w, scr_h;
+static int scr_w, scr_h, rw = RW, rh = RH;   /* internal resolution (lowered on slow GPUs) */
 
 static GLuint mk_tex(GLenum fmt, int w, int h)
 {
@@ -68,26 +68,34 @@ static GLuint mk_prog(GLuint vs, GLuint fs)
     return p;
 }
 
+/* render targets at the internal resolution w x h */
+static void targets(int w, int h)
+{
+    int i;
+    rw = w; rh = h;
+    tex_col = mk_tex(GL_RGBA16F, w, h);
+    tex_dep = mk_tex(GL_R32F, w, h);
+    fb_scene = mk_fb(tex_col, tex_dep);
+    fb_part = mk_fb(tex_col, 0);
+    for (i = 0; i < NBLOOM; i++) {
+        w = (w + 1) / 2; h = (h + 1) / 2;
+        bl[i] = mk_tex(GL_RGBA16F, w, h);
+        fb_bl[i] = mk_fb(bl[i], 0);
+    }
+}
+
 static void demo_init(int sw, int sh)
 {
-    int i, w = RW, h = RH;
+    int i;
     const char *src[5];
     GLuint vs_full, vs_part;
     scr_w = sw; scr_h = sh;
     glCreateVertexArrays(1, &vao);
     glBindVertexArray(vao);
-    tex_col = mk_tex(GL_RGBA16F, RW, RH);
-    tex_dep = mk_tex(GL_R32F, RW, RH);
-    fb_scene = mk_fb(tex_col, tex_dep);
-    fb_part = mk_fb(tex_col, 0);
+    targets(RW, RH);
     {   /* final image at screen resolution, blitted to the window */
         GLuint t; glCreateTextures(GL_TEXTURE_2D, 1, &t); glTextureStorage2D(t, 1, GL_RGBA8, sw, sh);
         fb_out = mk_fb(t, 0);
-    }
-    for (i = 0; i < NBLOOM; i++) {
-        w = (w + 1) / 2; h = (h + 1) / 2;
-        bl[i] = mk_tex(GL_RGBA16F, w, h);
-        fb_bl[i] = mk_fb(bl[i], 0);
     }
     /* shaders: common header + stage/scene specific part */
     src[0] = sh_head;
@@ -124,10 +132,11 @@ static void demo_frame(float t)
 {
     int i, w, h, np;
     int sc = direct(t, U);                    /* director fills U, returns scene program */
+    U[2] = (float)rh;
     if (preview_hook) sc = (preview_hook(U), sc);
     /* 1: scene */
     glBindFramebuffer(GL_FRAMEBUFFER, fb_scene);
-    glViewport(0, 0, RW, RH);
+    glViewport(0, 0, rw, rh);
     glDisable(GL_BLEND);
     use(sc);
     glBindTextureUnit(2, tex_text);
@@ -147,7 +156,7 @@ static void demo_frame(float t)
     }
     /* 3: bloom pyramid */
     use(PR_DOWN);
-    w = RW; h = RH;
+    w = rw; h = rh;
     for (i = 0; i < NBLOOM; i++) {
         w = (w + 1) / 2; h = (h + 1) / 2;
         glBindFramebuffer(GL_FRAMEBUFFER, fb_bl[i]);
@@ -159,7 +168,7 @@ static void demo_frame(float t)
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
     for (i = NBLOOM - 1; i > 0; i--) {
-        w = RW; h = RH;
+        w = rw; h = rh;
         { int k; for (k = 0; k < i; k++) { w = (w + 1) / 2; h = (h + 1) / 2; } }
         glBindFramebuffer(GL_FRAMEBUFFER, fb_bl[i - 1]);
         glViewport(0, 0, w, h);

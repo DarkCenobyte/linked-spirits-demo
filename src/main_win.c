@@ -104,6 +104,21 @@ void entry(void)
     synth_start();                         /* worker threads synthesise the soundtrack */
     demo_init(sw, sh);                     /* meanwhile: shaders, render targets */
     make_text();
+    {   /* time the heaviest shots; on a slower GPU render fewer pixels rather than drop frames */
+        static const float bt[3] = { 213.4f, 62, 300 };
+        DWORD worst = 0, a; int i;
+        for (i = 0; i < 3; i++) {
+            demo_frame(bt[i]); glFinish();     /* warm-up: drivers finish compiling lazily */
+            a = timeGetTime();
+            demo_frame(bt[i]); demo_frame(bt[i]); glFinish();
+            a = timeGetTime() - a;
+            if (a > worst) worst = a;
+        }
+        if (worst > 44) {                  /* > 22 ms a frame */
+            int k = worst > 160 ? 8 : worst > 90 ? 11 : worst > 60 ? 13 : 14;   /* scale k/16 */
+            targets(RW * k / 16, RH * k / 16);
+        }
+    }
     while (!synth_done()) {                /* precalc: a thin green thread of light */
         MSG m;
         PeekMessageA(&m, 0, 0, 0, PM_REMOVE);
