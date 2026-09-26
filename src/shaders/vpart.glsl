@@ -9,26 +9,40 @@ vec3 ph3(float n){return fract(sin(vec3(n,n+17.1,n+31.7)*12.9898)*43758.5453);}
 vec3 sdir(float n){vec3 r=ph3(n);float z=r.x*2.-1.,a=r.y*6.2831;return vec3(sqrt(1.-z*z)*vec2(cos(a),sin(a)),z);}
 // gentle curl-like drift
 vec3 drift(vec3 p,float t){return vec3(sin(p.y*1.3+t*.3+p.z),sin(p.z*1.1+t*.27+p.x*.7),sin(p.x*1.2+t*.23+p.y*.5));}
-// a point on the surface of a body (joints at U[B..B+19])
+// a point on the surface of a body (joints at U[B..B+19]); w: -1 hidden, 0 torso, 2 limbs, 3 armour of light
 vec4 bodyPt(int B,float n){
- vec3 r=ph3(n*.71),dd=sdir(n*3.3);float s=ph(n*1.31);
+ vec3 r=ph3(n*.71),dd=sdir(n*3.3);float s=ph(n*1.31),k=B>30?1.12:1.;      // the red body is larger in every dimension
  vec3 pel=U[B].xyz,chs=U[B+1].xyz,up=normalize(chs-pel+1e-5),sd=normalize(U[B+4].xyz-U[B+8].xyz+1e-5),fw=normalize(cross(sd,up));
  sd=cross(up,fw);
- if(s<.4){                                           // torso: one continuous body profile along the spine
+ if(s<.36){                                          // torso: one continuous body profile along the spine
   float y=mix(-.1,.47,r.x),th=r.y*6.2832;
   float rx=.105+.055*exp(-pow(y/.1,2.))+.04*exp(-pow((y-.35)/.08,2.))+.03*exp(-pow((y-.44)/.03,2.));
   float rz=.075+.025*exp(-pow((y-.33)/.1,2.));
   float bust=.035*exp(-pow((y-.31)/.045,2.))*exp(-pow((abs(cos(th))*rx-.058)/.035,2.))*step(0.,sin(th));
-  vec3 l=vec3(cos(th)*rx,y,sin(th)*(rz+bust));
+  vec3 l=vec3(cos(th)*rx,y,sin(th)*(rz+bust))*k;
   return vec4(pel+sd*l.x+up*l.y+fw*l.z,0);
  }
- if(s<.48)return vec4(U[B+3].xyz+dd*.1*(.93+.07*r.x)+up*.01,dot(dd,fw)>-.1?-1.:1.);   // head: the face is the mask
+ if(s<.42){vec3 e=dd*vec3(.068,.088,.086);                                   // head: the face is the mask
+  return vec4(U[B+3].xyz+(sd*e.x+up*(e.y+.02)+fw*(e.z-.02))*mix(1.,k,.3),dot(dd,fw)>-.1?-1.:1.);}
+ vec3 nk=U[B+2].xyz,hd=U[B+3].xyz;
+ if(s<.5){                                           // gorget: a lamellar collar from the collarbones to under the chin
+  float h=floor(r.x*6.)/5.,th=r.y*6.2832,R=mix(.085,.047,pow(h,.7))*k;
+  vec3 c=mix(nk-up*.035*k,hd-up*.075-fw*.012,h);
+  vec3 o=sd*cos(th)*R+fw*sin(th)*R*mix(.8,1.,h);
+  return vec4(c+o+up*.004*r.z,3);
+ }
+ if(s<.56){                                          // pauldrons: three lames hugging each shoulder
+  vec3 S=U[B+(s<.53?4:8)].xyz,ax=normalize(normalize(S-(pel+up*.43*k))*.7+up);
+  vec3 d=dd-2.*min(dot(dd,ax),0.)*ax;                 // the outer, upper half of a sphere
+  float c=dot(d,ax),band=floor(c*3.);
+  return vec4(S-ax*.012+d*(.052+.007*(2.-band))*k,c>.18?3.:-1.);
+ }
  vec3 a,b;float ra,rb;
- if(s<.5){a=U[B+2].xyz;b=U[B+3].xyz-up*.06;ra=.037;rb=.031;}      // neck
- else if(s<.72){int side=s<.61?0:4,m=int(ph(n*5.1)*2.99);a=U[B+4+side+m].xyz;b=U[B+5+side+m].xyz;ra=m==0?.041:m==1?.03:.02;rb=m==0?.032:m==1?.022:.012;}
- else{int side=s<.86?0:4,m=int(ph(n*5.3)*2.99);a=U[B+12+side+m].xyz;b=U[B+13+side+m].xyz;ra=m==0?.074:m==1?.045:.03;rb=m==0?.047:m==1?.028:.02;}
+ if(s<.58){a=nk;b=hd-up*.06;ra=.037;rb=.031;}                                // neck
+ else if(s<.77){int side=s<.675?0:4,m=int(ph(n*5.1)*2.99);a=U[B+4+side+m].xyz;b=U[B+5+side+m].xyz;ra=m==0?.041:m==1?.03:.02;rb=m==0?.032:m==1?.022:.012;}
+ else{int side=s<.885?0:4,m=int(ph(n*5.3)*2.99);a=U[B+12+side+m].xyz;b=U[B+13+side+m].xyz;ra=m==0?.074:m==1?.045:.03;rb=m==0?.047:m==1?.028:.02;}
  float u=r.x;vec3 c=mix(a,b,u),dir=normalize(b-a+vec3(1e-5,0,0)),o=normalize(cross(dir,dd)+1e-5);
- return vec4(c+o*mix(ra,rb,u)*(.9+.1*r.y),2);
+ return vec4(c+o*mix(ra,rb,u)*(.9+.1*r.y)*k,2);
 }
 void main(){
  float i=float(gl_VertexID),t=U[0].x,mode=U[63].x;
@@ -52,11 +66,11 @@ void main(){
    vec4 b=bodyPt(who>.5?40:20,i);
    p=b.xyz+drift(b.xyz*6.,t*1.5)*.01;
    inten*=step(-.5,b.w);
-   col=who>.5?vec3(1.,.13,.08):vec3(.15,.4,1.);
+   col=b.w>2.5?(who>.5?vec3(.04,.22,1.)*1.7:vec3(.06,1.,.22)*1.3):who>.5?vec3(1.,.13,.08):vec3(.15,.4,1.);
    float th=U[19].w*step(ph(i*.37),.55);          // the climax: they interpenetrate
    if(th>0.){vec4 b2=bodyPt(who>.5?20:40,i);vec3 m=(b.xyz+b2.xyz)*.5;p=mix(p,m+drift(m*9.,t*3.)*.02,th);
     col=mix(col,vec3(1.,.95,1.)*(.8+.4*sin(t*20.+i)),th*.8)+vec3(1,0,0)*th*step(.8,ph(i*1.1))*sin(t*30.+i)+vec3(0,0,1)*th*step(.8,ph(i*1.3))*sin(t*27.+i);}
-   col*=(.5+.9*r.z)*(who>.5?U[59].w:1.);sz=.0032;
+   col*=(b.w>2.5?.9+.2*r.z:.5+.9*r.z)*(who>.5?U[59].w:1.);sz=b.w>2.5?.0036:.0032;
   }else if(f<.92){                               // the field: dust of stars travelling past
    vec3 c=U[1].xyz;float E=40.;
    p=(r-.5)*2.*E;p.z-=t*U[19].x*25.;p=c+mod(p-c+E,2.*E)-E;
