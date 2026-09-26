@@ -84,7 +84,9 @@ def minify_all(parts):
                 l = line.strip()
                 if l.startswith('#define'):
                     l = re.sub(r'(?<![.\w])([A-Za-z_]\w*)', lambda m: ren.get(m.group(1), m.group(1)) if m.start() > 7 else m.group(1), l)
-                    l = '#define ' + collapse(floats(l[8:])).replace('(', ' (', 0)
+                    # keep object-like macros object-like: '#define N (x)' must not become 'N(x)'
+                    m = re.match(r'#define\s+(\w+)(\([^)]*\))?\s*(.*)', l)
+                    l = '#define ' + m.group(1) + (m.group(2) or '') + ' ' + collapse(floats(m.group(3)))
                 res.append('\n' + l + '\n')
                 continue
             l = floats(line)
