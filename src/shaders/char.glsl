@@ -86,8 +86,9 @@ float face(vec3 p0,vec2 bl2,float mo,float mr,float sty){
 // segment with gaps at the joints so the metal articulations show
 float seg(vec3 p,vec3 a,vec3 b,float ra,float rb,float ga,float gb){
  vec3 d=normalize(b-a);return capr(p,a+d*ga,b-d*gb,ra,rb);}
-float hand(vec3 p,vec3 W,vec3 H,vec3 pn,float curl){
- vec3 hx=normalize(H-W+1e-5),hz=normalize(pn-hx*dot(pn,hx)+vec3(0,1e-4,0)),hy=cross(hz,hx);
+// pn: the direction the palm faces; sg mirrors the hand (left/right) so both thumbs point forward
+float hand(vec3 p,vec3 W,vec3 H,vec3 pn,float curl,float sg){
+ vec3 hx=normalize(H-W+1e-5),hz=-normalize(pn-hx*dot(pn,hx)+vec3(0,1e-4,0)),hy=cross(hz,hx)*sg;
  vec3 l=vec3(dot(p-W,hx),dot(p-W,hy),dot(p-W,hz));
  float d=box(l-vec3(.052,0,0),vec3(.042,.036,.011),.01);
  for(int i=0;i<4;i++){
@@ -99,6 +100,26 @@ float hand(vec3 p,vec3 W,vec3 H,vec3 pn,float curl){
  vec3 t0=vec3(.025,.035,-.005),t1=t0+normalize(vec3(.5,.55,-.35))*.04,t2=t1+normalize(vec3(.9,.25,-.3-curl*.5))*.032;
  d=smin(d,min(cap(l,t0,t1,.011),cap(l,t1,t2,.0085)),.008);
  return d;
+}
+// a human foot without toes: heel, arch, instep, ball, a toe box longer on the inner side.
+// Foot frame: x towards the inner side (sd mirrors left/right), y up, z forward; the sole lies at y=-.105
+float foot(vec3 p,vec3 A,vec3 K,vec3 To,float sd){
+ vec3 r=p-A;
+ if(dot(r,r)>.07)return length(r)-.24;
+ vec3 u=normalize(K-A),ft=normalize(To-A),w=normalize(u-ft*dot(u,ft));
+ vec3 f=ft*.946+w*.326,n=w*.946-ft*.326;                                   // the sole is level when the ankle rests
+ vec3 q=vec3(dot(r,cross(n,f))*sd,dot(r,n),dot(r,f));
+ float d=ell(q-vec3(0,-.074,-.022),vec3(.029,.032,.04));                   // heel
+ d=smin(d,ell(q-vec3(0,-.024,-.004),vec3(.031,.045,.036)),.02);            // ankle, shaped around the joint
+ d=smin(d,ell(q-vec3(.004,-.066,.05),vec3(.034,.044,.075)),.03);           // midfoot, a high instep
+ d=smin(d,ell(q-vec3(.008,-.086,.118),vec3(.04,.021,.04)),.025);           // ball of the foot
+ d=smin(d,ell(q-vec3(.006,-.089,.152+.25*q.x),vec3(.031,.018,.033)),.018); // toe box, rounded
+ d=smin(d,cap(q,vec3(0,-.06,-.04),vec3(0,.05,-.03),.015),.02);             // achilles tendon
+ d=smin(d,min(sph(q-vec3(.02,-.006,-.004),.009),sph(q-vec3(-.021,-.016,-.008),.009)),.018);   // ankle bones, the inner one higher
+ d=smax(d,-ell(q-vec3(.034,-.118,.045),vec3(.022,.024,.05)),.012);         // inner arch
+ d=max(d,-q.y-.105);                                                       // flat sole
+ d=groove(d,q.y+.096,.0007,.001);                                          // seams: the sole, the toe cap
+ return groove(d,q.z-.1+.12*q.x,.0007,.001);
 }
 float body(vec3 p,int B){
  vec3 pel=U[B].xyz,chs=U[B+1].xyz,nk=U[B+2].xyz,hd=U[B+3].xyz;
@@ -122,17 +143,16 @@ float body(vec3 p,int B){
   vec3 S=U[o].xyz,E=U[o+1].xyz,W=U[o+2].xyz,H=U[o+3].xyz;
   float a=seg(p,S,E,.041,.032,.05,.03);
   a=min(a,seg(p,E,W,.03,.022,.03,.018));
-  if(length(p-W)<.2)a=min(a,hand(p,W,H,U[60+s].xyz,U[60+s].w));
+  if(length(p-W)<.2)a=min(a,hand(p,W,H,U[60+s].xyz,U[60+s].w,float(s)*2.-1.));
   d=smin(d,a,.012);
   float jn=min(sph(p-S,.038),min(sph(p-E,.027),sph(p-W,.018)));
   o=B+12+s*4;
   vec3 Hp=U[o].xyz,K=U[o+1].xyz,A=U[o+2].xyz,To=U[o+3].xyz;
   float g=seg(p,Hp,K,.074,.047,0.,.04);
   g=min(g,seg(p,K,A,.045,.028,.035,.02));
-  vec3 fd=normalize(To-A);
-  g=smin(g,capr(p,A+fd*.01+vec3(0,-.035,0),To+vec3(0,.012,0),.026,.02),.02);
+  g=smin(g,foot(p,A,K,To,float(s)*2.-1.),.015);
   d=smin(d,g,.025);
-  jn=min(jn,min(sph(p-K,.042),sph(p-A,.026)));
+  jn=min(jn,min(sph(p-K,.042),sph(p-A,.021)));
   if(jn<d){d=jn;m=3.;}
  }
  gM=m;

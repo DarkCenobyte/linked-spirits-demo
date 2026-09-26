@@ -6,9 +6,9 @@
  *  4 head pos                     5 head yaw, pitch, roll    6 gaze x, gaze y, pupil, blink
  *  7 mouth open, mouth round, iris mode (0 green .. 1 blue/red), eye glow
  *  8 cyborg head pos, reveal      9 cyborg yaw, pitch, blink L, blink R
- * 10 cyborg gaze x, y, pupil, mouth open        11 cyborg mouth round, -, distant voice (lab)
+ * 10 cyborg gaze x, y, pupil, mouth open        11 cyborg mouth round, snapshot time, distant voice (lab)
  * 12 lights, systems, scan line, door open      13 wave origin, radius
- * 14 dissolution clock, snapshot time, -, -      15..19 scene specific (18, 19: snapshot camera)
+ * 14 dissolution clock (cathedral)               15..19 scene specific (18, 19: snapshot camera)
  * 20..39 android joints          40..59 second body joints (astral)
  * 60 left palm normal, curl      61 right palm normal, curl   62 -   63 -, -, -, particle count
  */
@@ -82,6 +82,10 @@ static void fk(float *u, int base, const Pose *ps, float *hyaw, float *hpitch)
         }
     }
     for (i = 0; i < 20; i++) set_joint(u, base, i, J[i]);
+    if (base == 20) {                           /* palms face the thighs, fingers relaxed */
+        u[60 * 4] = -side.x; u[60 * 4 + 2] = -side.z; u[60 * 4 + 1] = 0; u[60 * 4 + 3] = 0.3f;
+        u[61 * 4] = side.x; u[61 * 4 + 2] = side.z; u[61 * 4 + 1] = 0; u[61 * 4 + 3] = 0.3f;
+    }
     *hyaw = ps->yaw + ps->hy;
     *hpitch = ps->hp - ps->lean - ps->pitch;
 }
@@ -173,11 +177,12 @@ static void arm_ik(float *u, int base, int s, V3 T, V3 pole, V3 handDir)
 {
     V3 S = v3(u[(base + 4 + s * 4) * 4], u[(base + 4 + s * 4) * 4 + 1], u[(base + 4 + s * 4) * 4 + 2]);
     V3 d = va(T, vs(S, -1)), dn = vn(d), pp, E, W;
-    float D = clampf(sqrtf(vd(d, d)), 0.05f, 0.52f), a = (0.28f * 0.28f + D * D - 0.245f * 0.245f) / (2 * D), h = sqrtf(clampf(0.28f * 0.28f - a * a, 0, 1));
+    float k = base == 40 ? 1.12f : 1, L1 = 0.28f * k, L2 = 0.245f * k;   /* the astral cyborg is larger */
+    float D = clampf(sqrtf(vd(d, d)), 0.05f, (L1 + L2) * 0.985f), a = (L1 * L1 + D * D - L2 * L2) / (2 * D), h = sqrtf(clampf(L1 * L1 - a * a, 0, 1));
     pp = vn(va(pole, vs(dn, -vd(pole, dn))));
     E = va(va(S, vs(dn, a)), vs(pp, h));
     W = va(S, vs(dn, D));
-    set_joint(u, base, 5 + s * 4, E); set_joint(u, base, 6 + s * 4, W); set_joint(u, base, 7 + s * 4, va(W, vs(vn(handDir), 0.17f)));
+    set_joint(u, base, 5 + s * 4, E); set_joint(u, base, 6 + s * 4, W); set_joint(u, base, 7 + s * 4, va(W, vs(vn(handDir), 0.17f * k)));
 }
 static V3 facedir(float yaw, float pitch) { return v3(sinf(yaw) * cosf(pitch), sinf(pitch), cosf(yaw) * cosf(pitch)); }
 /* a camera in front of a face: dist along its gaze, side offset along its right, looking at it */
@@ -203,7 +208,6 @@ static int direct(float t, float *u)
     memset(&ps, 0, sizeof(ps));
     ps.root = v3(0, 0.93f, -1.2f);
     walk_pose(&ps, 0, 0);
-    setv(60, -1, 0, 0, 0.3f); setv(61, 1, 0, 0, 0.3f);   /* palms face the thighs, fingers relaxed */
     setv(3, 1, 0, 0, 0);                        /* focus, aperture, exposure, grade */
     setv(19, 0, 0.93f, -1.2f, 0);               /* cradle hinge */
     setv(12, 1, 4, -10, 0);                     /* lights, systems, scan, door */
@@ -223,20 +227,16 @@ static int direct(float t, float *u)
         fk(u, 20, &ps, &hy, &hp);
         hdP = v3(u[23 * 4], u[23 * 4 + 1], u[23 * 4 + 2]);
         head_frame(hy, hp);
-        u[12 * 4] = b < 2 ? 0 : b < 8 ? 0.06f + 0.05f * (b > 3.5f) * (0.6f + 0.4f * sinf(t * 37) * sinf(t * 11)) : mixf(0.12f, 1, ease((b - 8) / 3));
+        u[12 * 4] = b < 8 ? 0.06f * ease(t / 1.5f) + 0.05f * (b > 3.5f) * (0.6f + 0.4f * sinf(t * 37) * sinf(t * 11)) : mixf(0.12f, 1, ease((b - 8) / 3));
         u[12 * 4 + 1] = b < 2 ? (b > 0.25f) + (b > 0.62f) + (b > 1.12f) + (b > 1.56f) : 4;
         u[6 * 4 + 3] = b < 6 ? 1 : b < 6.6f ? 1 - ease((b - 6) / 0.6f) : u[6 * 4 + 3];
         u[6 * 4 + 2] = b < 6.3f ? 0.55f : mixf(0.55f, 0.27f, ease((b - 6.3f) / 0.8f)) + 0.05f * (1 - ease((b - 8) / 3));
-        if (b < 2) {                            /* green lights in the dark */
-            cam(v3(0.3f, 1.3f, 3.5f), v3(1.6f, 1.35f, -1.7f), 30);
-            setv(3, 0.8f, 0.03f, 0, 0);
-            setv(63, 2, 0, 1, 4);
-        } else if (b < 8) {                     /* extreme close-up: the closed eye, then it opens */
-            float k = (b - 2) / 6;
+        if (b < 8) {                            /* straight after loading: the closed eye, about to open */
+            float k = b / 8;
             V3 e = hpt(-0.033f, 0.002f, 0.064f);
-            V3 c = va(e, va(vs(hdF, mixf(0.085f, 0.055f, k)), va(vs(hdU, 0.006f), vs(hdR, -0.008f))));
+            V3 c = va(e, va(vs(hdF, mixf(0.1f, 0.055f, k)), va(vs(hdU, 0.006f), vs(hdR, -0.008f))));
             cam(c, e, 24);
-            setv(3, mixf(0.085f, 0.055f, k), 0.05f, 0, 0);
+            setv(3, mixf(0.1f, 0.055f, k), 0.05f, 0, 0);
             u[12 * 4 + 2] = b > 4 && b < 6 ? (b - 4) / 2 : -10;   /* the scan line sweeps across the face */
         } else {                                /* the long pull-back */
             float k = ease((b - 8) / 6);
@@ -342,8 +342,8 @@ static int direct(float t, float *u)
         ps.sf[0] = ps.sf[1] = 1.35f; ps.ef[0] = ps.ef[1] = 0.25f; ps.sa[0] = ps.sa[1] = 0.25f;
         ps.lean = 0.12f;
         u[15 * 4 + 1] = 1;
-        setv(60, 0, 0, 1, 0.1f); setv(61, 0, 0, 1, 0.1f);
         fk(u, 20, &ps, &hy, &hp);
+        setv(60, 0, 0, 1, 0.1f); setv(61, 0, 0, 1, 0.1f);   /* palms on the doors */
         hdP = v3(u[23 * 4], u[23 * 4 + 1], u[23 * 4 + 2]);
         head_frame(hy, hp);
         u[12 * 4 + 3] = k;
@@ -441,7 +441,8 @@ static int direct(float t, float *u)
         }
         /* the contact wave and the dissolution */
         setv(13, -0.29f, 1.72f, 39.99f, t < 235.2f ? -1 : (t - 235.2f) * (t - 235.2f) * 0.6f);
-        setv(14, t - 243, t > 233.4f ? 243 : 0, 0, 0);   /* dissolution clock; snapshot time */
+        setv(14, t - 243, 0, 0, 0);                     /* dissolution clock */
+        if (t > 233.4f) u[11 * 4 + 1] = 243;              /* the frame the world dissolves from */
     } else if (b < 167) {
         /* ---- cyberspace: bodies of light, the journey, the duo, the dream */
         Pose pc;
@@ -454,6 +455,7 @@ static int direct(float t, float *u)
         ps.root = v3(-0.25f, 0.93f + 0.05f * sinf(t * 0.7f), 0); ps.sa[0] = ps.sa[1] = 0.2f; ps.ef[0] = ps.ef[1] = 0.35f;
         ps.hf[0] = 0.15f; ps.kf[0] = 0.3f; ps.hf[1] = -0.05f; ps.kf[1] = 0.15f;
         pc.root = v3(0.3f, 0.86f + 0.05f * sinf(t * 0.6f + 1), -0.55f); pc.sa[0] = pc.sa[1] = 0.25f; pc.ef[0] = pc.ef[1] = 0.3f;
+        if (t < 262) pc.root = vlerp(v3(0.12f, 0.86f + 0.05f * sinf(t * 0.6f + 1), -0.36f), pc.root, ease((t - 258.5f) / 3));   /* close behind her */
         pc.hf[1] = 0.12f; pc.kf[1] = 0.25f;
         cyaw = 0;
         if (b < 110) {                           /* the meeting */
@@ -480,8 +482,8 @@ static int direct(float t, float *u)
             j[0] = r[0] + (j[0] - r[0]) * 1.12f; j[1] = r[1] + (j[1] - r[1]) * 1.12f; j[2] = r[2] + (j[2] - r[2]) * 1.12f;
         }
         if (b < 110 && t > 253.5f && t < 257.5f) {   /* her hand on the android's shoulder */
-            V3 sh = v3(u[24 * 4], u[24 * 4 + 1] + 0.03f, u[24 * 4 + 2]);
-            arm_ik(u, 40, 0, vlerp(v3(u[46 * 4], u[46 * 4 + 1], u[46 * 4 + 2]), va(sh, v3(0.02f, 0.02f, -0.05f)), ease((t - 253.5f) / 1.5f)), v3(1, -0.3f, -0.5f), v3(0, -0.4f, 1));
+            V3 sh = v3(u[24 * 4], u[24 * 4 + 1], u[24 * 4 + 2]);   /* the wrist behind, the hand over the top of the shoulder */
+            arm_ik(u, 40, 0, vlerp(v3(u[46 * 4], u[46 * 4 + 1], u[46 * 4 + 2]), va(sh, v3(0.03f, 0.075f, -0.13f)), ease((t - 253.5f) / 1.5f)), v3(1, -0.3f, -0.5f), v3(-0.1f, -0.35f, 1));
             setv(60, 0, -1, 0, 0.4f);
         }
         u[59 * 4 + 3] = b < 110 ? ease((t - 251.5f) / 2.5f) : 1;

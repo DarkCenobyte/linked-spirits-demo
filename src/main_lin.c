@@ -35,6 +35,18 @@ static void hook(float *u)
         char k[16]; const char *v; sprintf(k, "U%d", i);
         if ((v = getenv(k))) sscanf(v, "%f %f %f %f", u + i * 4, u + i * 4 + 1, u + i * 4 + 2, u + i * 4 + 3);
     }
+    if (getenv("DUMPU")) {                /* DUMPU=1: print the uniforms of the frame */
+        for (int i = 0; i < NU; i++) fprintf(stderr, "U%d %.3f %.3f %.3f %.3f\n", i, u[i * 4], u[i * 4 + 1], u[i * 4 + 2], u[i * 4 + 3]);
+    }
+    {   /* CAMJ="joint dx dy dz fov": camera placed relative to a joint (U index), aimed at it */
+        const char *v = getenv("CAMJ"); float d[5];
+        if (v && sscanf(v, "%f %f %f %f %f", d, d + 1, d + 2, d + 3, d + 4) == 5) {
+            float *h = u + (int)d[0] * 4;
+            u[4] = h[0] + d[1]; u[5] = h[1] + d[2]; u[6] = h[2] + d[3]; u[7] = d[4];
+            u[8] = h[0]; u[9] = h[1]; u[10] = h[2]; u[11] = 0;
+            u[12] = sqrtf(d[1] * d[1] + d[2] * d[2] + d[3] * d[3]); u[13] = 0.01f;
+        }
+    }
     {   /* CAMH="dx dy dz fov": camera placed relative to the android's head, aimed at her neck */
         const char *v = getenv("CAMH"); float d[4];
         if (v && sscanf(v, "%f %f %f %f", d, d + 1, d + 2, d + 3) == 4) {

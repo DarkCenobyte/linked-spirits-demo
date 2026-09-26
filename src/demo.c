@@ -134,12 +134,12 @@ static void use(int p)
     glUniform4fv(0, NU, U);
 }
 
-/* U[14].y > 0: the world will dissolve from a snapshot of the frame at that time.
+/* U[11].y > 0: the world will dissolve from a snapshot of the frame at that time.
  * It is rendered once (the director is a pure function of time) and its camera
  * is handed to the particles in U[18] (position, fov) and U[19] (target, roll). */
 static void snapshot(void)
 {
-    float st = U[14 * 4 + 1];
+    float st = U[11 * 4 + 1];
     int i;
     if (st <= 0) return;
     if (st != snap_t) {
@@ -160,7 +160,7 @@ static void demo_frame(float t)
     int sc = direct(t, U);                    /* director fills U, returns scene program */
     U[2] = (float)rh;
     if (preview_hook) sc = (preview_hook(U), sc);
-    if (U[14 * 4 + 1] > 0 && U[14 * 4 + 1] != snap_t) { snapshot(); sc = direct(t, U); U[2] = (float)rh; if (preview_hook) preview_hook(U); }
+    if (U[11 * 4 + 1] > 0 && U[11 * 4 + 1] != snap_t) { snapshot(); sc = direct(t, U); U[2] = (float)rh; if (preview_hook) preview_hook(U); }
     snapshot();
     /* 1: scene */
     glBindFramebuffer(GL_FRAMEBUFFER, fb_scene);
