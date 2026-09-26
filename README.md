@@ -34,8 +34,8 @@ the same.
 
 | file | bytes |
 |---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 161 280 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **71 168** (69.5 KiB) |
+| `linked_spirits.exe` (raw, CRT-free) | 165 888 |
+| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **73 216** (71.5 KiB) |
 
 This is above the 64 KiB ideal and well inside the 256 KiB limit. Artistic
 quality came first. Most of the bytes above 64 KiB went into the cyborg
@@ -46,9 +46,9 @@ Where the packed bytes go (LZMA estimates):
 
 | part | raw | compressed |
 |---|---|---|
-| x86-64 code (director, synth, voice, platform) | 59.1 KB | ≈ 28.3 KB |
+| x86-64 code (director, synth, voice, platform) | 61.0 KB | ≈ 29.4 KB |
 | singing-voice bank (54 sung lines, 3 voices) | 49.3 KB | ≈ 20 KB |
-| GLSL (minified, 8 sources, 7 programs) | 40.0 KB | ≈ 14.5 KB |
+| GLSL (minified, 8 sources, 7 programs) | 42.5 KB | ≈ 15.3 KB |
 | score, tables, GL names, constants | ≈ 6 KB | ≈ 4 KB |
 
 ## Storyboard
@@ -57,11 +57,11 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 
 | time | scene |
 |---|---|
-| 0:00 | Darkness. Green lights come on one by one. Extreme close-up of a closed eye; a scan line crosses the face; the eye opens (reactive pupil, micro-saccades). A long pull-back reveals the white laboratory and the cradle. |
+| 0:00 | Straight after loading: an extreme close-up of her closed eye in the dark, while her systems wake one by one. A scan line crosses the face; the eye opens (reactive pupil, micro-saccades). A long pull-back reveals the white laboratory and the cradle. |
 | 0:38 | **Song 1 (android, voice A)**: she rises and walks through the lab and along the glass partition. Racks of green lights, the halo above the pod. |
-| 1:26 | She stops, tiny in a long white corridor. **A distant voice (cyborg, voice B)** calls her, *Follow the signal*. Each time it sings, violet light leaks through the gap of the doors at the far end. |
+| 1:26 | She stops in a clean, aseptic medical corridor, before a sealed access. **A distant voice (cyborg, voice B)** calls her, *Follow the signal*. It sounds far away, down a corridor, and each time it sings, violet light leaks through the seams of the access. |
 | 1:50 | She answers (*I know that tone*); the dialogue at a distance. |
-| 2:10 | **The search**: the corridor gets longer, twists and grows vast and strange. *Why do I hear you in my thoughts?* |
+| 2:10 | **The search**: the access slides open on the impact. Beyond it, a ribbed passage twists and grows vast and strange. *Why do I hear you in my thoughts?* |
 | 2:48 | She pushes the doors; white light floods in. |
 | 2:53 | **The cathedral**: a nave of vertebral ribs and cables. At its end, a gigantic dome of woven cables with a face at its apex. Extreme close-up: the left eye opens **blue**, then the right one **red**, on an impact. |
 | 3:07 | **The sung dialogue**. The cyborg's worn face is set into the mass of cables. Below it hangs a body of worn plates over exposed muscle, arms ending in torn wires, hung from the vault and sunk into a machine. |
@@ -107,7 +107,8 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 * **The android**: a helmet-like cranium and an oval face mask tapering to a V
   jaw, with no nose, thin lips and shallow cheek hollows. The neck is slimmer
   than the head and set under the skull; a composite body has visible metal
-  joints.
+  joints, hands whose palms rest towards the thighs, and sculpted feet without
+  toes (heel, high instep, ball, rounded toe box, inner arch, flat sole).
   * **Real jaw**: the lower face rotates about a hinge under the ears. The
     angular gap between the lips is folded onto the lip line and carved out as
     the mouth, over teeth plates and a dark cavity; the cheeks stretch
@@ -153,10 +154,20 @@ At run time the voice is re-synthesised:
   vowel morphing towards canonical targets and emphasised consonants.
 * **Voice character**: formants are scaled through the internal sample rate,
   per voice.
+* **Singing, not speaking**:
+  * notes join through smooth glides that anticipate the next note, and are
+    approached from slightly below after a rest;
+  * the vibrato starts late and never quite repeats, and a slow pitch drift
+    plus tiny jitter and shimmer keep the voice alive;
+  * the loudness follows the sung phrase rather than spoken stress;
+  * on the highest notes the first formant follows the pitch, as a soprano
+    opens her jaw, and the resonances widen slightly so they never whistle.
+* **The distant cyborg** sounds down a corridor: a darker, quieter direct
+  voice, flutter echoes and much more room.
 
 The music never masks the words. The voices duck the instruments, a
 dynamic EQ carves room for them, and a presence boost is applied. The
-reverb is kept low on the voices.
+reverb is kept low on the voices, except for the distant cyborg.
 
 **Intelligibility check**: Whisper via sherpa-onnx, run on the soundtrack
 rendered by the final build (music and voices together). Word error rate
@@ -164,14 +175,17 @@ of the transcript against the lyrics, over all 54 sung lines:
 
 | test | WER |
 |---|---|
-| full mix, lines in pairs, Whisper `small.en` | **13.0%** |
-| full mix, each line alone, `small.en` | 19.8% |
-| full mix, lines in pairs, `base.en` | 33.4% |
+| full mix, lines in pairs, Whisper `small.en` | **14.7%** |
+| full mix, each line alone, `small.en` | 15.7% |
+| full mix, lines in pairs, `base.en` | 20.1% |
 
-Most remaining errors are near-homophones ("*I knew that tune*" for "*I know
-that tone*"). The final couplet, sung by the merged voice over thinned-out
-pads, is transcribed with a single error: "*I wake with memories not my own,
-and hear the name they never knew*".
+Most remaining errors are near-homophones ("*I used that tone*" for "*I know
+that tone*"). Whisper sometimes also stops after the first line of a pair: of
+"*Between the red and blue / there is a color without a name*" it keeps only
+the first half, although the second line alone is transcribed without an
+error. The final couplet, sung by the merged voice over thinned-out pads,
+comes back with a single error: "*I wake with memories not my own, and hear
+the name they never knew*".
 
 ### Music: `tools/score.py`, `src/synth.c`
 
