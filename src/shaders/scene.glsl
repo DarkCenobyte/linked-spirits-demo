@@ -167,6 +167,50 @@ float cyborg(vec3 p){
  gGaze=cGaze;
  return face(h,U[9].zw,U[10].w,U[11].x,1.);
 }
+// a sagging cable: two capsules through a lowered midpoint
+float cbl(vec3 p,vec3 a,vec3 b,float r,float sg){vec3 m=(a+b)*.5-vec3(0,sg,0);return min(cap(p,a,m,r),cap(p,m,b,r));}
+// a twisted bundle of n strands of radius rs on a circle of radius R, from a to b
+float bundle(vec3 p,vec3 a,vec3 b,float R,float rs,float n,float tw){
+ vec3 ax=b-a,pa=p-a;float L=length(ax);ax/=L;float s=dot(pa,ax);
+ vec3 q=pa-ax*s,u=normalize(cross(ax,vec3(.3,.1,1))),v=cross(ax,u);
+ float sec=6.2832/n,an=mod(atan(dot(q,v),dot(q,u))+s*tw,sec)-sec*.5,rh=length(q);
+ return max(length(vec2(rh*cos(an)-R,rh*sin(an)))-rs,abs(s-L*.5)-L*.5)*.8;
+}
+// her body, held by the wall: a worn bust whose neck and arms have become cables
+float cybody(vec3 p){
+ vec3 r=p-vec3(0,1.95,40.45);
+ if(dot(r,r)>1.6)return length(r)-1.2;
+ vec3 q=p-vec3(0,1.89,40.1);q.x=abs(q.x);
+ float b=ell(q-vec3(0,0,.01),vec3(.14,.065,.085));                         // collarbones, sternum, shoulders
+ b=smin(b,capr(q,vec3(.03,.04,.0),vec3(.16,.03,.01),.028,.04),.03);
+ b=max(b,-q.y-.03-.004*sin(q.x*90.));                                      // broken off below the collarbones
+ b=max(b,-length(q.xy-vec2(.055,.0))+.011);                                // cable ports
+ float m=1.,d=b;
+ // below it no body, only an open ribcage of metal around a core of cables, and a spine into the wall
+ vec3 c=p-vec3(0,0,40.1);float x=1e5;
+ for(int i=0;i<4;i++){float fi=float(i),y=1.83-fi*.045,R=.12-fi*.012;
+  x=min(x,max(length(vec2(length(c.xz*vec2(1.,1.3))-R,p.y-y+.06*c.z))-.007,c.z-.06));}
+ x=min(x,max(cap(p,vec3(0,1.87,40.2),vec3(0,1.5,40.24),.02),.005-abs(mod(p.y,.04)-.02))); // vertebrae
+ if(x<d){d=x;m=3.;}
+ vec3 nt=cP+vec3(0,-.06,-.028)*cR;                                         // the neck: a twisted bundle under the skull
+ x=bundle(p,vec3(0,1.93,40.11),nt,.016,.0085,7.,60.);
+ x=min(x,bundle(p,vec3(0,1.9,40.1),vec3(.01,1.4,40.14),.045,.015,9.,18.));  // the core of cables through the ribcage
+ x=min(x,cap(p,vec3(.055,1.89,40.03),vec3(.1,1.55,40.2),.01));             // cables leave the chest ports
+ x=min(x,cap(p,vec3(-.055,1.89,40.03),vec3(-.13,1.6,40.25),.01));
+ for(int i=0;i<2;i++){float sd=float(i)*2.-1.;                             // the arms dissolve into cables drawn into the halo
+  vec3 sh=vec3(sd*.17,1.925,40.11),el=vec3(sd*.46,2.,40.34),en=vec3(sd*.95,2.42,40.5);
+  x=min(x,min(bundle(p,sh,el,.022,.011,5.,25.),bundle(p,el-(el-sh)*.05,en,.019,.009,5.,-20.)));
+  x=min(x,cbl(p,sh+vec3(0,-.03,.02),vec3(sd*.8,1.5,40.9),.012,.1));
+ }
+ for(int i=0;i<5;i++){float fi=float(i)-2.;                                // thick cables from the back of her skull into the wall
+  x=min(x,cbl(p,cP+vec3(fi*.028,.035-.012*abs(fi),-.07)*cR,vec3(fi*.32,2.3+.12*abs(fi),41.4),.011-.001*abs(fi),.25));
+  x=min(x,cbl(p,vec3(fi*.05,1.87+.03*abs(fi),40.17),vec3(fi*.4,1.4-.1*abs(fi),41.4),.014,.2));}   // and from the back of the bust
+ for(int i=0;i<6;i++){float sd=float(i/3)*2.-1.,k=float(i%3);             // the connectors at her temples run on into the wall
+  vec3 hc=k<.5?vec3(.12,-.05,-.09):k<1.5?vec3(.13,.02,-.07):vec3(.1,-.09,-.08);
+  x=min(x,cbl(p,cP+hc*vec3(sd,1,1)*cR,vec3(sd*(.7+.35*k),2.5-.45*k,41.4),.0075-.001*k,.18+.1*k));}
+ if(x<d){d=x;m=6.;}
+ gM=m;return d;
+}
 float ribs(vec3 p){
  vec2 a=vec2(abs(p.x)+6.,p.y);float R=length(a),th=atan(a.y,a.x);
  float zc=mod(p.z,5.)-2.5;
@@ -196,22 +240,25 @@ float curtain(vec3 p){
  // the waterfall of cables below her: thousands of strands to the floor
  float x=p.x+.13*sin(p.y*1.3+floor(p.x/.09)),cx=(floor(x/.09)+.5)*.09;
  float w=length(vec2(x-cx,(p.z-39.9+.3*sin(cx*2.)-.02*p.y*p.y)))-.028;
- w=max(w,max(p.y-1.75+.3*abs(p.x),abs(p.x)-2.5));
+ w=max(w,max(p.y-1.8+.3*abs(p.x),abs(p.x)-2.5));
  d=min(d,w*.8);
  return d;
 }
 float map(vec3 p){
- if(gCharOnly){float d=android(p),m=gM;float x=cyborg(p);if(x<d){d=x;m=gM;gWho=1.;}gM=m;return d;}
- float d=p.y,m=1.;
- float x=ribs(p);if(x<d){d=x;m=8.;}
- x=vcables(p);if(x<d){d=x;m=6.;}
- if(p.z>30.){x=curtain(p);if(x<d){d=x;m=6.;}}
- // the world comes apart into points after the wave has passed
+ float d=1e5,m=1.,w=0.,x;
+ if(!gCharOnly){
+  d=p.y;
+  x=ribs(p);if(x<d){d=x;m=8.;}
+  x=vcables(p);if(x<d){d=x;m=6.;}
+  if(p.z>30.){x=curtain(p);if(x<d){d=x;m=6.;}}
+ }
+ x=cybody(p);if(x<d){d=x;m=gM;w=1.;}
+ // the world, and the cables that held her, come apart into points after the wave has passed
  float ds=U[14].x*(1.-smoothstep(U[13].w-14.,U[13].w-2.,length(p-U[13].xyz)));
  if(ds>0.)d=max(d,dots(p,mix(.9,.1,ds)));
- x=android(p);if(x<d){d=x;m=gM;}
- x=cyborg(p);if(x<d){d=x;m=gM;gWho=1.;}
- gM=m;
+ x=android(p);if(x<d){d=x;m=gM;w=0.;}
+ x=cyborg(p);if(x<d){d=x;m=gM;w=1.;}
+ gM=m;gWho=w;
  return d;
 }
 vec3 env(vec3 d){return vec3(.75,.78,.82)*(.3+.4*max(d.y,0.))*LIGHTS+vec3(2.5,2.6,2.8)*smoothstep(.97,.99,dot(d,normalize(vec3(.2,.9,.3))))*LIGHTS;}
@@ -437,7 +484,7 @@ vec3 shade(vec3 p,vec3 rd,float t,float m){
   float st=(1.-smoothstep(.001,.003,abs(abs(hp.x)-.036+.002*sin(hp.y*300.))))*step(hp.y,-.01)*step(-.07,hp.y);
   alb*=1.-.55*st*(1.-smoothstep(-.07,-.01,hp.y)*.6);
   float g=(hp.z-.033-.4*hp.y-2.*hp.y*hp.y)*.9;
-  wear=(1.-smoothstep(0.,.0012,abs(g)))*step(0.,hp.z);
+  wear=(1.-smoothstep(0.,.0012,abs(g)))*step(0.,hp.z)*step(-.1,hp.y);
  }
  float sh=softsh(p+n*.004,L,3.);gCharOnly=false;
  float oc=ao(p,n,.004+t*.004);
