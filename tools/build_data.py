@@ -14,7 +14,8 @@ QUALS = ['m', 'M', '7', 's', '2', 'm9', 'M7', 'm6']
 FXK = ['blip', 'cut', 'hum', 'sweep', 'open', 'riser', 'impact', 'echo', 'turn', 'door', 'eyeB', 'eyeR',
        'touch', 'wave', 'shatter', 'hush', 'stop', 'silence', 'blink', 'theme', 'shimmer', 'title']
 VOICE = {'A': 0, 'B': 1, 'AB': 2, 'C': 3}
-SPK_B = int(os.environ.get("SPKB", "7"))   # the cyborg's source speaker (Kokoro v0.19: 1 af_bella, 3 af_sarah, 7 bf_emma)
+SPK_A = int(os.environ.get("SPKA", "8"))   # the android's source speaker (Kokoro v0.19: 0 af, 1 af_bella, 2 af_nicole,
+SPK_B = int(os.environ.get("SPKB", "7"))   # 3 af_sarah, 4 af_sky, 7 bf_emma, 8 bf_isabella); the cyborg's
 
 
 def chord_code(c):
@@ -37,10 +38,10 @@ def carr(name, typ, vals):
 def main():
     lines = vb.read_lyrics()
     vo = [VOICE[v[0]] for v in S.VOX]
-    an = vb.analyse_lines(lines)
+    an = vb.analyse_lines(lines, SPK_A)
     # two speakers: the android's words (her lines, the duo, the merged voice) and the cyborg's
     ia = [i for i, v in enumerate(vo) if v != 1]; ib = [i for i, v in enumerate(vo) if v in (1, 2)]
-    tb = 'b' if SPK_B != 1 else 'a'
+    tb = 'b' if SPK_B != SPK_A else 'a'
     anb = vb.analyse_lines([lines[i] for i in ib], SPK_B)
     bk = vb.build_bank([lines[i] for i in ia + ib], [an[i] for i in ia] + anb, tags=['a'] * len(ia) + [tb] * len(ib), **VB_PARAMS)
     St = vb.pack(bk)

@@ -34,21 +34,23 @@ the same.
 
 | file | bytes |
 |---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 228 352 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **101 888** (99.5 KiB) |
+| `linked_spirits.exe` (raw, CRT-free) | 226 816 |
+| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **100 864** (98.5 KiB) |
 
 Artistic quality came first. At 77.5 KiB, going under 64 KiB would have
 meant cutting the voice bank and with it the intelligibility of the singing,
 so 128 KiB was taken as the ceiling instead, and the extra room was spent
 where it shows most:
 
-* **the voices** (+22 KB): finer spectral keyframes and quantisation, a 10 ms
-  energy track, and a second source speaker for the cyborg. The word error
-  rate of the sung lyrics fell from 14.7% to the figures below;
+* **the voices** (+20 KB): finer spectral keyframes and quantisation, a 10 ms
+  energy track, and a source speaker of her own for each character. The word
+  error rate of the sung lyrics fell from 14.7% to the figures below;
 * **the astral world**: a galaxy of a quarter of a million points, discs of
   light, a sky with a galactic band, nebulae and diffraction spikes, planets
   with sunsets and rings of fire;
-* **the lyrics on screen**, and an anamorphic streak on the brightest lights.
+* **the lyrics on screen**, an anamorphic streak on the brightest lights, a
+  furnished medical corridor, the twisting corridor behind her, and the run on
+  a planetary ring.
 
 Before that, the bytes above 64 KiB had gone into the cyborg (her body, the
 machine and the cable dome of the cathedral) and the dissolution of the
@@ -60,7 +62,7 @@ Where the packed bytes go (LZMA estimates):
 |---|---|---|
 | x86-64 code (director, synth, voice, platform) | 63 KB | ≈ 31 KB |
 | singing-voice bank (54 sung lines, 2 speakers) + lyrics text | 101 KB | ≈ 43 KB |
-| GLSL (minified, 8 sources, 7 programs) | 48.4 KB | ≈ 17 KB |
+| GLSL (minified, 8 sources, 7 programs) | 50.9 KB | ≈ 18 KB |
 | score, tables, GL names, constants | ≈ 6 KB | ≈ 4 KB |
 
 ## Storyboard
@@ -71,15 +73,15 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 |---|---|
 | 0:00 | Straight after loading: an extreme close-up of her closed eye in the dark, while her systems wake one by one. A scan line crosses the face; the eye opens (reactive pupil, micro-saccades). A long pull-back reveals the white laboratory and the cradle. |
 | 0:38 | **Song 1 (android, voice A)**: she rises and walks through the lab and along the glass partition. Racks of green lights, the halo above the pod. |
-| 1:26 | She stops in a clean, aseptic medical corridor, before a sealed access. **A distant voice (cyborg, voice B)** calls her, *Follow the signal*. It sounds far away, down a corridor, and each time it sings, violet light leaks through the seams of the access. |
+| 1:26 | She stops in a clean, aseptic medical corridor (a waiting bench, a stretcher and its IV pole, a cart of drawers, a monitor tracing a pulse, a red extinguisher), before a sealed access. **A distant voice (cyborg, voice B)** calls her, *Follow the signal*. It sounds far away, down a corridor, and each time it sings, violet light leaks through the seams of the access. |
 | 1:50 | She answers (*I know that tone*); the dialogue at a distance. |
-| 2:10 | **The search**: the access slides open on the impact. Beyond it, a ribbed passage twists and grows vast and strange. *Why do I hear you in my thoughts?* |
+| 2:10 | **The search**: the access slides open on the impact. Beyond it, a ribbed passage lined with cables grows vast and strange. She comes towards us, and far behind her the long corridor twists about its axis, while she stays untouched. *Why do I hear you in my thoughts?* |
 | 2:48 | She pushes the doors; white light floods in. |
 | 2:53 | **The cathedral**: a nave of vertebral ribs and cables. At its end, a gigantic dome of woven cables with a face at its apex. Extreme close-up: the left eye opens **blue**, then the right one **red**, on an impact. |
 | 3:07 | **The sung dialogue**. The cyborg's worn face is set into the mass of cables. Below it hangs a body of worn plates over exposed muscle, arms ending in torn wires, hung from the vault and sunk into a machine. |
 | 3:50 | The android reaches up and takes the torn stump of her arm. A blue point of light appears under her finger, then a red one; a pulse runs up her arm, and **the contact wave**, a red/blue interference front, spreads through the cathedral. Then **the world dissolves**: every visible surface (the cables, the cyborg, the android) turns into points of light in its own colours, released by a front sweeping out from the touch, rising like embers into the dark. |
 | 4:10 | **Astral bodies**: the screen stays black, then the astral world fades in: a blue body of particles (android) with a green gorget and pauldrons; a taller red body (cyborg) with vivid blue ones. Her hand on the android's shoulder. Below them, a spiral galaxy of a quarter of a million points of light, leaning towards the viewer; above, the band of another galaxy with its dust lanes, veils of nebulae and bright stars with diffraction spikes. |
-| 4:24 | **The journey**: they lean into the flight, arms swept back, legs trailing, leaving two braided wakes of blue and red light. Acceleration: streaks of stars, the edges of the frame pull everything out of it. An Earth-like world with a sunset line and a dreaming night side, a desert world, a gas giant whose ring is a disc of glittering dust in the planet's shadow (they fly through it: an ocean of fragments), an ocean world. Whoever sings reaches out towards the other. |
+| 4:24 | **The journey**: they face the flight and lean into it, arms swept back, legs trailing, each body shedding sparks of its own colour behind it. Acceleration: the universe streams towards them, streaks of stars, the edges of the frame pull everything out of it. An Earth-like world with a sunset line and a dreaming night side, a desert world, then a gas giant: its ring comes up under their feet, they land and run on its ice and rock, the giant looming beside them, and leap back into flight. An ocean world. Whoever sings reaches out towards the other. |
 | 4:34 | **Duo** (voices A and B together). |
 | 5:22 | *Am I becoming you?* Push into her iris: the iris becomes a planetary system. The pupil ignites into a star, the fibres settle into dust lanes, worlds appear on their orbits. |
 | 5:43 | The final quatrain, hand in hand, above a disc where worlds are born: dust of light to the horizon, with gaps opened by young worlds and a young star at its centre that backlights everything (a planet eclipsing into a ring of fire). |
@@ -163,12 +165,15 @@ Three synthetic female voices sing 54 lines of lyrics:
 At build time, each line is spoken by a neural TTS (Kokoro, via sherpa-onnx)
 and aligned by DTW to an MBROLA rendering of the same phonemes (which gives
 phoneme boundaries). The two characters have two different source speakers:
-the android's words come from one voice (`af_bella`), the cyborg's (her lines
-and her part of every duet) from a darker one (`bf_emma`), so they differ in
-their very timbre, not only by a formant shift. Each rendering is analysed
+the android's words come from one voice (`bf_isabella`), the cyborg's (her
+lines and her part of every duet) from a darker one (`bf_emma`), so they
+differ in their very timbre, not only by a formant shift, and still blend in
+the duets. The android's speaker was chosen among six Kokoro voices by the
+intelligibility check below; her upper formants also sit lower than those of
+the previous voice, which sounded too shrill. Each rendering is analysed
 into 16th-order LPC → line spectral frequencies. Variable-frame-rate
 keyframes are least-squares fitted and projected on 16 PCA components with
-uniform quantisation, plus a 10 ms energy track. That is 99 KB (≈ 42 KB
+uniform quantisation, plus a 10 ms energy track. That is 95 KB (≈ 41 KB
 packed) for the whole libretto, both speakers.
 
 At run time the voice is re-synthesised:
@@ -198,18 +203,19 @@ reverb is kept low on the voices, except for the distant cyborg.
 rendered by the final build (music and voices together). Word error rate
 of the transcript against the lyrics, over all 54 sung lines:
 
-| test | before (one speaker, coarser bank) | now |
-|---|---|---|
-| full mix, lines in pairs, Whisper `small.en` | 14.7% | **9.6%** |
-| full mix, each line alone, `small.en` | 15.7% | 13.3% |
-| full mix, lines in pairs, `base.en` | 20.1% | 15.4% |
+| test | one speaker, coarser bank | + cyborg `bf_emma` | + android `bf_isabella` (now) |
+|---|---|---|---|
+| full mix, lines in pairs, Whisper `small.en` | 14.7% | 9.6% | **7.2%** |
+| full mix, each line alone, `small.en` | 15.7% | 13.3% | 12.3% |
+| full mix, lines in pairs, `base.en` | 20.1% | 15.4% | 17.1% |
 
-Most remaining errors are near-homophones or single phonemes: "*I knew that
-tune*" for "*I know that tone*", "*what makes maybe another thing*" for
-"*what wakes may be another thing*", "*I make with memories not my own*" for
-"*I wake…*". In her solo lines the cyborg's "*voice*", which the
-single-speaker bank turned into "*force*", is now heard right; in one duet
-("*Between your voice and mine*") it still becomes "*the two forces*".
+Most remaining errors are near-homophones or single phonemes: "*I know that
+tune*" for "*I know that tone*", "*the whisper in the wild*" for "*…in the
+wire*", "*and keep the name they never knew*" for "*and hear a name…*". In
+her solo lines the cyborg's "*voice*", which the single-speaker bank turned
+into "*force*", is now heard right; in one duet ("*Between your voice and
+mine*") it still becomes "*the two forces*". The smaller `base.en` model does
+slightly worse with the new android voice than with the previous one.
 
 ### Music: `tools/score.py`, `src/synth.c`
 

@@ -63,8 +63,9 @@ void main(){
   vec3 h=U[4].xyz-p;float dh=length(h);
   p+=h/dh*U[17].x*.3*exp(-dh*1.5)*sin(t*.7+i);        // they begin to react to her
   if(U[17].y<.5)p=c+mod(p-c+ext,2.*ext)-ext;
-  col=mix(mix(vec3(.9,1.,.95),vec3(.3,1.,.5),step(.8,r.x)),mix(vec3(.2,.4,1.),vec3(1.,.15,.1),step(.5,r.z)),U[17].y)*(.5+.5*sin(t*(1.+r.y*2.)+i));
-  sz=.006;
+  col=mix(mix(vec3(.9,1.,.95),vec3(.3,1.,.5),step(.8,r.x)),mix(vec3(.2,.4,1.),vec3(1.,.15,.1),step(.5,r.z)),U[17].y)*(.5+.5*sin(t*(1.+r.y*2.)+i))
+     *smoothstep(.6,1.8,length(p-U[1].xyz));     // discreet: none drifts right in front of the lens
+  sz=.004;
  }else if(mode<2.5){                             // 2: the first green lights in the dark
   float k=mod(i,4.);p=vec3((mod(k,2.)*2.-1.)*(k<2.?1.7:2.5),k<2.?1.45:2.1,k<2.?-1.55:-2.2);
   col=vec3(.2,1.,.45)*step(k+.5,U[12].y)*4.;sz=.02;
@@ -81,16 +82,23 @@ void main(){
    col*=(b.w>2.5?.9+.2*r.z:.5+.9*r.z)*(who>.5?U[59].w:1.);sz=b.w>2.5?.0036:.0032;
   }else if(i<120000.){                               // the field: dust of stars travelling past
    vec3 c=U[1].xyz;float E=40.;
-   p=(r-.5)*2.*E;p.z-=t*U[19].x*25.;p=c+mod(p-c+E,2.*E)-E;
+   p=(r-.5)*2.*E;p.z+=t*U[19].x*25.;p=c+mod(p-c+E,2.*E)-E;
    col=mix(vec3(.6,.7,1.),vec3(1.,.7,.6),ph(i*.3))*(.3+ph(i*.7));sz=.03;
-   if(mode>3.5){                                  // 4: inside a planetary ring: an ocean of fragments
-    E=6.;vec3 e=vec3(E,E*.25,E);p=(r-.5)*2.*e;p.x-=t*1.2;p=c+mod(p-c+e,2.*e)-e;
-    float br=pow(ph(i*.9),3.);col=mix(vec3(.5,.45,.4),vec3(1.,.93,.85),br)*(.05+1.2*br);sz=.004+.03*pow(ph(i*.4),6.);}
-  }else if(i<136000.){                           // their wakes: two braided trails of light, blue and red
-   float j=i-120000.,w=step(8000.,j),s=pow(ph(j*.37),1.5),L=4.+50.*U[19].x,a=s*L*.9-t*4.+w*3.1416;
-   vec3 o=w>.5?U[40].xyz:U[20].xyz;o.y+=.25;
-   p=mix(o,vec3(0,1.2,0),smoothstep(0.,.3,s))+vec3(cos(a),sin(a),0)*(.05+2.2*s)+vec3(0,0,s*L)+(ph3(j*.9)-.5)*.1*(1.+6.*s);
-   col=(w>.5?vec3(1.,.25,.15):vec3(.2,.5,1.))*(1.-s)*(.6+.8*ph(j*.2))*U[67].x;sz=.012;
+   if(mode>3.5){                                  // 4: close up, the ring is a crowd of ice and rock under their feet
+    E=12.;vec3 C=U[16].xyz;c.y=C.y;p=(r-.5)*2.*E;p.z+=C.z;p=c+mod(p-c+E,2.*E)-E;
+    float u=(length(p.xz-C.xz)-U[17].y)/(U[17].z-U[17].y),g=0.,
+          den=(.3+.7*vn2(vec2(u*40.,.5)))*(.5+.5*vn2(vec2(u*230.,7.5)))*(1.-.85*smoothstep(.44,.46,u)*(1.-smoothstep(.49,.51,u)));   // the ring's own bands
+    p.y=c.y+pow(r.y,3.)*.2-.03;
+    for(int f=0;f<4;f++){vec3 ft=U[35+f%2*4+f/2*20].xyz,q=p-ft;g+=exp(-dot(q.xz,q.xz)*18.)*step(ft.y,c.y+.12);}   // the four toes
+    p.y+=g*.1*ph(i*.5);                            // a footfall stirs the chunks
+    float ice=step(.85,ph(i*.9));
+    col=mix(vec3(.95,.86,.72),vec3(.72,.76,.85),vn2(vec2(u*13.,3.5)))*(.2+.45*ph(i*.3)+ice*1.2+g*2.)*step(ph(i*.7),den)*smoothstep(E,E*.6,length(p.xz-c.xz));
+    sz=.008+.035*pow(ph(i*.4),3.);}
+  }else if(i<136000.){                           // they shed light as they fly: sparks leave each body and fall behind
+   float j=i-120000.,w=step(8000.,j),a=fract(ph(j*.37)+t*(.4+.3*ph(j*.9)));
+   vec4 b=bodyPt(w>.5?40:20,j*1.7);
+   p=b.xyz+vec3(0,0,a*(.3+5.*U[19].x))+(ph3(j*.9)-.5)*a*.5;
+   col=(w>.5?vec3(1.,.3,.2):vec3(.3,.55,1.))*(1.-a)*(1.-a)*(.5+ph(j*.2))*U[67].x*step(-.5,b.w);sz=.005;
   }else if(i<150000.){                           // motes of the dream: tiny lights drifting around them
    float j=i-136000.;vec3 h=ph3(j*.61);
    p=(h-.5)*vec3(16,7,16)+vec3(0,1.3,0);p+=drift(p*.4,t*.6)*.8;
@@ -115,7 +123,7 @@ void main(){
    if(ph(j*.9)>.97)col=kd<.5?vec3(1.,.3,.6)*2.:vec3(.6,.8,1.)*2.5;                  // pink knots, blue sparks
    if(kd>1.5){vec3 w=p-C,s=normalize(U[18].xyz);float bb=dot(w,s);col*=bb<0.&&dot(w,w)-bb*bb<U[16].w*U[16].w?.08:1.;}  // the planet's shadow
    col*=den*(.3+ph(j*1.7)*.9)*U[69].w*(1.-smoothstep(.85,1.,rr));
-   sz=kd<.5?R*.002:kd<1.5?R*.00025:.5;
+   sz=kd<.5?R*.002:kd<1.5?R*.00025:.05;
   }
  }else if(mode<5.5){                             // 5: the contact, then the world dissolves into points of light
   if(i<1.5){                                     // a blue point under her finger, then a red one
@@ -146,7 +154,7 @@ void main(){
  pline=0.;
  if(i>=1e7){                                    // streak pass: line segments stretched by the speed
   float j=floor((i-1e7)*.5),tail=mod(i,2.);vec3 c=U[1].xyz;float E=60.;vec3 rr=ph3(j*.173);
-  p=(rr-.5)*2.*E;p.z-=t*U[19].x*60.;p=c+mod(p-c+E,2.*E)-E;p.z+=tail*U[19].x*(8.+10.*rr.z);
+  p=(rr-.5)*2.*E;p.z+=t*U[19].x*60.;p=c+mod(p-c+E,2.*E)-E;p.z-=tail*U[19].x*(8.+10.*rr.z);
   col=tail>.5?mix(vec3(.5,.15,.9),vec3(1.,.3,.35),rr.x)*.06:mix(vec3(.75,.85,1.),vec3(1.,.85,.9),rr.x)*(.6+.8*rr.y);
   sz=.02;pline=1.;inten=1.;
  }

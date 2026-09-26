@@ -107,8 +107,8 @@ static void demo_init(int sw, int sh)
     src[0] = sh_head;
     src[1] = sh_vfull;
     vs_full = mk_shader(GL_VERTEX_SHADER, src, 2);
-    src[1] = sh_vpart;
-    vs_part = mk_shader(GL_VERTEX_SHADER, src, 2);
+    src[1] = sh_lib; src[2] = sh_vpart;
+    vs_part = mk_shader(GL_VERTEX_SHADER, src, 3);
     src[2] = sh_lib;
     src[3] = sh_char;
     src[4] = sh_scene;

@@ -14,7 +14,7 @@
  * 63 particle mode, first, intensity, end
  * 64, 65 lyrics: line, forming 0..1, dissolving 0..1, voice (two slots: the new line, the one leaving)
  * 66 post: speed warp, swirl strength, swirl centre (screen uv)
- * 67 space light: wakes, motes, disc normal z
+ * 67 space light: the light the bodies shed, motes, disc normal z
  * 68, 69 the great disc of light: centre, radius | tilt, spin, kind (0 galaxy, 1 disc of newborn worlds, 2 the ring of U[16]), intensity
  */
 #define TEXT_W 2048
@@ -189,14 +189,6 @@ static void arm_ik(float *u, int base, int s, V3 T, V3 pole, V3 handDir)
     W = va(S, vs(dn, D));
     set_joint(u, base, 5 + s * 4, E); set_joint(u, base, 6 + s * 4, W); set_joint(u, base, 7 + s * 4, va(W, vs(vn(handDir), 0.17f * k)));
 }
-/* screen position (0..1) of a world point for the current camera; -1 when behind it */
-static void proj(V3 p, float *x, float *y)
-{
-    V3 c = v3(U_[4], U_[5], U_[6]), f = vn(va(v3(U_[8], U_[9], U_[10]), vs(c, -1))), r = vn(vc(f, v3(0, 1, 0))), up = vc(r, f), v = va(p, vs(c, -1));
-    float z = vd(v, f), th = tanf(U_[7] * 0.0087266f);
-    if (z < 0.1f) { *x = *y = -1; return; }
-    *x = 0.5f + 0.5f * vd(v, r) / (z * th * 2.353f); *y = 0.5f + 0.5f * vd(v, up) / (z * th);
-}
 static V3 facedir(float yaw, float pitch) { return v3(sinf(yaw) * cosf(pitch), sinf(pitch), cosf(yaw) * cosf(pitch)); }
 /* a camera in front of a face: dist along its gaze, side offset along its right, looking at it */
 static void facecam(V3 h, float yaw, float pitch, float dist, float side, float fov)
@@ -211,8 +203,14 @@ static V3 sidev(float yaw) { return v3(cosf(yaw), 0, -sinf(yaw)); }
 /* ---------------------------------------------------------------- the film */
 #define B(x) ((x) * 2.4f)
 /* the lyrics: each sung line forms just before it is sung and dissolves after it */
+static void pose_mix(Pose *a, const Pose *b, float k)
+{
+    float *x = (float *)a; const float *y = (const float *)b; int i;
+    for (i = 0; i < (int)(sizeof(Pose) / sizeof(float)); i++) x[i] += (y[i] - x[i]) * k;
+}
 static float spd0(float b, float t)          /* flight speed through the astral world */
 {
+    if (b >= 122 && b < 128) return mixf(mixf(1, 0.25f, ease((t - 296.4f) / 1.2f)), 1, ease((t - 305.3f) / 1.9f));   /* running on the ring */
     return b < 110 ? 0 : b < 114 ? ease((t - 264) / 6) : b < 142 ? 1 : b < 143 ? 0 : b < 155 ? 1.3f : 0;
 }
 static float singing[4];                    /* how much each voice is singing now: android, cyborg, duo, ghost */
@@ -291,7 +289,7 @@ static int direct(float t, float *u)
             V3 c0 = va(e, vs(hdF, 0.07f)), c1 = v3(2.6f, 2.2f, 4.2f);
             V3 c = vlerp(c0, c1, k * k), tg = vlerp(e, v3(0, 1.1f, -1.2f), k);
             cam(c, tg, mixf(24, 40, k));
-            setv(16, 0, 1.6f, -1, 3); setv(63, 1, 0, 0.6f * k, 6000);
+            setv(16, 0, 1.6f, -1, 3); setv(63, 1, 0, 0.4f * k, 2500);
             setv(3, sqrtf(vd(va(c, vs(tg, -1)), va(c, vs(tg, -1)))), 0.05f * (1 - k) + 0.004f, 0, 0);
         }
     } else if (b < 70) {
@@ -314,7 +312,7 @@ static int direct(float t, float *u)
         H = hdP;
         setv(16, H.x, 1.6f, H.z + 1.5f, 3.5f);
         setv(17, clampf((t - 60) / 40, 0, 1), 0, 0, 0);
-        setv(63, 1, 0, 0.5f + 0.5f * clampf((t - 100) / 60, 0, 1), 4000 + 20000 * clampf((t - 60) / 90, 0, 1));
+        setv(63, 1, 0, 0.35f + 0.25f * clampf((t - 100) / 60, 0, 1), 1500 + 4500 * clampf((t - 60) / 90, 0, 1));
         u[6 * 4 + 2] = 0.28f + 0.04f * wobble(t * 0.5f, 11);
         if (t > 109.2f && t < 110.5f) u[6 * 4 + 2] = 0.2f;          /* the pupil contracts */
         if (b >= 36) mouth(t, mouth_b, 11 * 4 + 2);                  /* the distant voice lights the far end */
@@ -371,21 +369,18 @@ static int direct(float t, float *u)
             cam(va(va(H, vs(F, -1.6f)), v3(0.25f, 0.1f, 0)), va(H, vs(F, 3)), 38);
             setv(3, 1.7f, 0.006f, 0, 0);
         } else if (b < 62) {                     /* overhead: the ribs flowing by */
-            cam(va(H, v3(0.01f, 1.1f, -0.5f)), va(H, v3(0, -1.5f, 0.6f)), 62);
+            cam(va(H, v3(0.22f, 0.72f, -0.45f)), va(H, v3(0, -1.5f, 0.6f)), 64);   /* under the sagging cables, between two of them */
             setv(3, 2.6f, 0.004f, 0, 0);
-        } else if (b < 66) {                     /* the corridor becomes vast and strange */
-            cam(va(H, v3(1.2f, -1.2f, 3.5f)), va(H, v3(0, 1.5f, 0)), 55);
-            setv(3, 3.8f, 0.004f, 0, 0);
+        } else if (b < 66) {                     /* she comes towards us; far behind her the long corridor twists */
+            cam(va(va(H, vs(F, 3.3f)), v3(0.35f, -0.2f, 0)), va(H, v3(0, -0.25f, 0)), 42);
+            setv(3, 3.3f, 0.003f, 0, 0);
+            u[66 * 4 + 1] = 2.4f * ease((t - 149.5f) / 7) + 0.15f * sinf(t * 0.8f);
         } else if (b < 68) {                     /* Why do I hear you in my thoughts? */
             cam(va(va(H, vs(F, 0.5f)), vs(S, -0.15f)), H, 27);
             setv(3, 0.52f, 0.03f, 0, 0);
         } else {                                  /* the great doors */
             cam(v3(0, 1.3f, 44), v3(0, 2.2f, 58), 42);
             setv(3, 12, 0.004f, 0, 0);
-        }
-        if (b >= 58) {                           /* the far end turns like a vortex (the camera's eye only) */
-            float x, y; proj(v3(0, 1.8f, 58), &x, &y);
-            if (x > -0.5f) setv(66, 0, 2.2f * strange * (0.8f + 0.2f * sinf(t * 0.7f)), x, y);
         }
     } else if (b < 72) {
         /* ---- she pushes the doors; light floods in */
@@ -401,7 +396,7 @@ static int direct(float t, float *u)
         u[12 * 4 + 3] = k;
         cam(v3(0.6f, 1.25f, 54.2f), v3(0, 2.4f, 58), 46);
         setv(3, 3.5f, 0.004f, 1.5f * ease((t - 170.5f) / 2.3f), 0);
-        setv(16, 0, 2, 56, 3); setv(63, 1, 0, 1, 20000);
+        setv(16, 0, 2, 56, 3); setv(63, 1, 0, 0.6f, 6000);
     } else if (b < 104) {
         /* ---- the cathedral: revelation, dialogue, contact */
         float z = clampf(2 + (t - 174) * 1.0f, 2, 38.6f), sp = t > 174 && t < 210.6f ? 1 : 0, cy;
@@ -432,7 +427,7 @@ static int direct(float t, float *u)
         setv(10, 0.03f * wobble(t * 1.5f, 31), 0.02f * wobble(t * 1.1f, 33) - 0.12f, t < 186 ? mixf(0.6f, 0.3f, ease((t - 184) / 1.5f)) : 0.3f + 0.03f * wobble(t, 35), 0);
         mouth(t, mouth_b, 10 * 4 + 3);
         { float mr = u[10 * 4 + 3 + 1]; setv(11, mr, 0, 0, 0); }
-        setv(16, 0, 3, z + 3, 6); setv(63, 1, 0, 0.6f, 30000);
+        setv(16, 0, 3, z + 3, 6); setv(63, 1, 0, 0.4f, 9000);
         if (t > 233.4f) {                        /* the contact, then the world dissolves (particle mode 5) */
             setv(63, 5, 0, 1, 12002 + 250000);
             setv(15, t - 234.0f, t - 234.6f, (t - 235.2f) * 0.8f, 0);   /* blue point, red point, the pulse up her arm */
@@ -523,6 +518,7 @@ static int direct(float t, float *u)
         } else {                                 /* the journey: side by side, flying, singing to each other */
             float fl = clampf(spd0(b, t), 0, 1.3f);
             ps.root = v3(-0.35f, 0.93f + 0.05f * sinf(t * 0.7f), 0); pc.root = v3(0.4f, 0.86f + 0.05f * sinf(t * 0.6f + 1), -0.35f);
+            ps.yaw = cyaw = 3.14159f;            /* they face where they fly (-z): the worlds come towards them */
             ps.lean = 0.2f + 0.35f * fl; pc.lean = 0.2f + 0.3f * fl;
             for (i = 0; i < 2; i++) {            /* arms swept back and open, legs trailing in a slow kick */
                 ps.sf[i] -= 0.45f * fl; ps.sa[i] += 0.25f * fl; pc.sf[i] -= 0.4f * fl; pc.sa[i] += 0.3f * fl;
@@ -530,9 +526,18 @@ static int direct(float t, float *u)
                 ps.kf[i] += fl * (0.25f + 0.2f * sinf(t * 1.1f + i * 2.5f)); pc.kf[i] += fl * (0.25f + 0.2f * sinf(t * 0.9f + i * 2.5f + 1));
             }
             k = singing[0] > singing[2] ? singing[0] : singing[2];   /* whoever sings reaches out towards the other */
-            ps.sf[0] += 0.9f * k; ps.sa[0] += 0.15f * k; ps.ef[0] += 0.2f * k; ps.hy += 0.35f * k;
+            ps.sf[1] += 0.9f * k; ps.sa[1] += 0.15f * k; ps.ef[1] += 0.2f * k; ps.hy -= 0.35f * k;   /* her right hand, towards +x */
             k = singing[1] > singing[2] ? singing[1] : singing[2];
-            pc.sf[1] += 0.9f * k; pc.sa[1] += 0.15f * k; pc.ef[1] += 0.2f * k; pc.hy -= 0.35f * k;
+            pc.sf[0] += 0.9f * k; pc.sa[0] += 0.15f * k; pc.ef[0] += 0.2f * k; pc.hy += 0.35f * k;
+            if (b >= 122 && b < 128) {           /* the ring: legs down, a run on its dust, a leap, and away */
+                Pose r = ps, q = pc;
+                float up = ease((t - 305.3f) / 1.9f), run = ease((t - 296.4f) / 1.2f) * (1 - up), f = (t - 296.4f) * 1.45f;
+                walk_pose(&r, f, 1.75f); walk_pose(&q, f + 0.3f, 1.6f);
+                r.root = v3(ps.root.x, 0.9f + 0.05f * cosf(f * 12.566f), 0); q.root = v3(pc.root.x, 1.02f + 0.05f * cosf(f * 12.566f + 1.9f), -0.35f);
+                r.lean = q.lean = 0.3f; r.hy = ps.hy; q.hy = pc.hy;
+                pose_mix(&ps, &r, run); pose_mix(&pc, &q, run);
+                ps.root.y += 3 * up * up; pc.root.y += 3 * up * up;
+            }
             if (b >= 132 && b < 134) {           /* two separate signals intertwined: they circle each other */
                 float a = (t - 316.8f) * 1.3f;
                 ps.root = v3(0.5f * cosf(a), 0.93f + 0.3f * sinf(a * 0.5f), 0.5f * sinf(a)); pc.root = v3(-0.5f * cosf(a), 0.86f - 0.3f * sinf(a * 0.5f), -0.5f * sinf(a));
@@ -557,11 +562,20 @@ static int direct(float t, float *u)
             float *j = u + (40 + i) * 4, *r = u + 40 * 4;
             j[0] = r[0] + (j[0] - r[0]) * 1.12f; j[1] = r[1] + (j[1] - r[1]) * 1.12f; j[2] = r[2] + (j[2] - r[2]) * 1.12f;
         }
+        if (b >= 122 && b < 128) {               /* on the ring: the lowest foot rests on the dust */
+            float run = ease((t - 296.4f) / 1.2f) * (1 - ease((t - 305.3f) / 1.9f));
+            int B;
+            for (B = 20; B <= 40; B += 20) {
+                float m = u[(B + 15) * 4 + 1], *j;
+                if (u[(B + 19) * 4 + 1] < m) m = u[(B + 19) * 4 + 1];
+                for (j = u + B * 4 + 1; j < u + (B + 20) * 4; j += 4) *j -= (m - 0.01f) * run;
+            }
+        }
         if (b >= 143 && b < 150) {               /* the final quatrain: hand in hand */
-            V3 m = vlerp(v3(u[27 * 4], u[27 * 4 + 1], u[27 * 4 + 2]), v3(u[51 * 4], u[51 * 4 + 1], u[51 * 4 + 2]), 0.5f);
-            k = ease((t - 343.2f) / 2);
-            arm_ik(u, 20, 0, vlerp(v3(u[26 * 4], u[26 * 4 + 1], u[26 * 4 + 2]), va(m, v3(-0.04f, 0, 0)), k), v3(0, -1, 0.3f), v3(1, 0, 0.2f));
-            arm_ik(u, 40, 1, vlerp(v3(u[50 * 4], u[50 * 4 + 1], u[50 * 4 + 2]), va(m, v3(0.04f, 0, 0)), k), v3(0, -1, 0.3f), v3(-1, 0, -0.2f));
+            V3 m = vlerp(v3(u[31 * 4], u[31 * 4 + 1], u[31 * 4 + 2]), v3(u[47 * 4], u[47 * 4 + 1], u[47 * 4 + 2]), 0.5f);
+            k = ease((t - 343.2f) / 2);          /* her right hand, the cyborg's left */
+            arm_ik(u, 20, 1, vlerp(v3(u[30 * 4], u[30 * 4 + 1], u[30 * 4 + 2]), va(m, v3(-0.04f, 0, 0)), k), v3(0, -1, -0.3f), v3(1, 0, -0.2f));
+            arm_ik(u, 40, 0, vlerp(v3(u[46 * 4], u[46 * 4 + 1], u[46 * 4 + 2]), va(m, v3(0.04f, 0, 0)), k), v3(0, -1, -0.3f), v3(-1, 0, 0.2f));
         }
         if (b < 110 && t > 253.5f && t < 257.5f) {   /* her hand on the android's shoulder */
             V3 sh = v3(u[24 * 4], u[24 * 4 + 1], u[24 * 4 + 2]);   /* the wrist behind, the hand over the top of the shoulder */
@@ -582,19 +596,22 @@ static int direct(float t, float *u)
         /* the worlds */
         if (b >= 114 && b < 118) { k = (t - 273.6f) / 9.6f; setv(16, -60 + 20 * k, -45, -120 + 170 * k, 40); setv(17, 0, 0, 0, 0); }
         if (b >= 118 && b < 122) { k = (t - 283.2f) / 9.6f; setv(16, 70 - 10 * k, -30, -160 + 150 * k, 45); setv(17, 1, 0, 0, 0); }
-        if (b >= 122 && b < 128) { k = (t - 292.8f) / 14.4f; setv(16, 0, -60 + 58 * k, -300 + 60 * k, 70); setv(17, 3, 90, 190, 0.15f); }
+        if (b >= 122 && b < 128) {               /* a ring lies flat below them, comes up under their feet, slides by as they run */
+            k = ease((t - 292.8f) / 4.8f);
+            setv(16, -260, mixf(-25, 0, k) - 4 * ease((t - 305.3f) / 1.9f), -150 - 250 * (1 - k) + 6 * clampf(t - 297.6f, 0, 12), 70); setv(17, 3, 150, 420, 0);
+        }
         if (b >= 128 && b < 134) { k = (t - 307.2f) / 14.4f; setv(16, -40, -35, -200 + 180 * k, 60); setv(17, 2, 0, 0, 0); }
         if (b >= 143 && b < 155) { k = (t - 343.2f) / 28.8f; setv(16, 80, -20, -380 + 200 * k, 90); setv(17, 3, 120, 260, -0.35f); setv(15, -120, 40, -600, 60); u[14 * 4] = 1; }
         if (b >= 155) { setv(15, 0, -1000, 0, 900); u[14 * 4] = 2; setv(16, 0, 0, 0, 0); setv(18, 0.35f, 0.25f, -1, 0.26f); }
         spd = spd0(b, t);
         setv(19, spd, 0.8f, 0, b >= 150 && b < 155 ? sinf(clampf((t - 360) / 12, 0, 1) * 3.14159f) : 0);
-        setv(63, b >= 122 && b < 126 && t > 297.6f ? 4 : 3, 0, 1.2f, b >= 122 && b < 126 && t > 297.6f ? 60000 : 90000);
+        setv(63, b >= 124 && b < 128 ? 4 : 3, 0, 1.2f, 90000);
         u[62 * 4 + 2] = spd > 0.3f ? 9000 * spd : 0;
         u[66 * 4] = spd * 0.9f;                   /* at speed the frame's edges pull everything out of it */
-        setv(67, clampf(spd, 0, 1), 1, 0, 0);    /* wakes, motes */
+        setv(67, 0.25f + 0.75f * clampf(spd, 0, 1), 1, 0, 0);    /* the light they shed, motes */
         u[63 * 4 + 3] = 400000;                   /* the great disc beneath them: a galaxy, a ring, a nursery of worlds */
         setv(68, 150, -260, -1700, 1000); setv(69, 0.1f, 0.01f, 0, u[59 * 4 + 3]); u[67 * 4 + 2] = 0.5f;   /* a galaxy, leaning towards us */
-        if (b >= 122 && b < 128) { setv(69, u[17 * 4 + 3], 0.02f, 2, 1.5f); u[67 * 4 + 2] = 0.25f; }
+        if (b >= 122 && b < 128) { setv(69, 0, 0.02f, 2, 1.5f); u[67 * 4 + 2] = 0; }   /* the ring's dust, lit and shadowed by its planet; flat */
         if (b >= 143 && b < 155) {
             setv(68, -100, -22, -550, 1300); setv(69, 0, 0.08f, 1, 1.4f); u[67 * 4 + 2] = 0;
             setv(18, -0.179f, -0.0394f, -0.983f, 0.008f);   /* the young star at its centre lights everything from behind */
@@ -627,15 +644,18 @@ static int direct(float t, float *u)
         } else if (b < 122) {                    /* faces, singing together */
             setv(3, 0, 0, 0, 2);
             if (b < 120) facecam(A, hy, hp, 0.62f, 0.2f, 28); else facecam(Cc, chy, chp, 0.62f, -0.2f, 28);
-        } else if (b < 124) {                    /* the rings approach */
-            cam(v3(-3, 2.2f, 3), v3(0, -4, -60), 60);
-            setv(3, 4, 0.004f, 0, 2);
-        } else if (b < 126) {                    /* inside the ring: an ocean of fragments */
-            cam(v3(0.6f * sinf(t * 0.4f), 1.4f, 2.4f), v3(0, 1.4f, 0), 50);
-            setv(3, 2.4f, 0.01f, 0, 2);
-        } else if (b < 128) {                    /* the gas giant, from above the ring */
-            cam(v3(1.5f, 2.6f, 3.2f), v3(0, -10, -80), 58);
-            setv(3, 4, 0.004f, 0, 2);
+        } else if (b < 124) {                    /* a ring comes up under them */
+            cam(v3(-3, 2.6f, 3.5f), v3(-25, -8, -60), 60);
+            setv(3, 4.5f, 0.004f, 0, 2);
+        } else if (b < 125.5f) {                 /* they run on its dust; the giant looms behind them */
+            cam(v3(3.3f, 2.4f, 1.0f + 0.25f * sinf(t * 0.6f)), v3(0, 0.9f, -0.5f), 44);
+            setv(3, 3.9f, 0.002f, 0, 2);
+        } else if (b < 127) {                    /* two small lights running on an endless ring */
+            cam(v3(4.5f, 3.2f, 7.5f), v3(-30, 2, -40), 50);
+            setv(3, 9, 0.003f, 0, 2);
+        } else if (b < 128) {                    /* a leap, and away */
+            cam(v3(0.8f, 0.3f, 3.4f), v3(0, 2 + 2.5f * ease((t - 305.3f) / 1.9f), -6), 46);
+            setv(3, 3.8f, 0.002f, 0, 2);
         } else if (b < 132) {                    /* Your echo moves / inside my own */
             setv(3, 0, 0, 0, 2);
             if (b < 130) facecam(A, hy, hp, 0.58f, -0.18f, 28); else facecam(Cc, chy, chp, 0.58f, 0.18f, 28);

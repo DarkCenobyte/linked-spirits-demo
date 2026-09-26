@@ -22,10 +22,6 @@ void main(){
 #endif
 #ifdef FINAL
  vec2 res=vec2(textureSize(A,0)),p=q;
- // the far end of the corridor turns like a vortex (distant pixels only, U[66].y at its screen position U[66].zw)
- if(U[66].y>0.){vec2 dv=(q-U[66].zw)*vec2(2.353,1);
-  float a=U[66].y*pow(max(1.-length(dv)/.38,0.),2.)*smoothstep(8.,20.,texture(D,q).x);
-  p=U[66].zw+mat2(cos(a),sin(a),-sin(a),cos(a))*dv/vec2(2.353,1);}
  // at speed the edges of the frame pull everything out of it (U[66].x)
  float sp=U[66].x,rr=length((q-.5)*vec2(1.6,1));
  p=.5+(p-.5)*(1.-sp*.1*rr*rr);

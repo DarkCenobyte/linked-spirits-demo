@@ -125,6 +125,36 @@ float medical(vec3 p,out float m){
  if(hp<d){d=hp;m=8.;}
  float fr=max(box(p-vec3(0,1.1,25.82),vec3(.72,1.16,.03),.01),-box(p-vec3(0,1.1,25.82),vec3(.64,1.1,.2),0.));
  if(fr<d){d=fr;m=3.;}
+ // furniture along the walls, between the doors
+ if(p.x<-.9){
+  if(abs(p.z-12.)<.9){                                                          // a waiting bench
+   float c=min(box(p-vec3(-1.24,.46,12),vec3(.21,.035,.75),.025),box(p-vec3(-1.44,.7,12),vec3(.03,.12,.75),.025));
+   float f=min(box(p-vec3(-1.24,.4,12),vec3(.19,.015,.72),.01),box(vec3(p.x+1.24,p.y-.2,abs(p.z-12.)-.62),vec3(.17,.2,.02),.01));
+   if(c<d){d=c;m=12.;}if(f<d){d=f;m=3.;}}
+  if(abs(p.z-18.)<.5){                                                          // a cart of drawers
+   float c=max(box(p-vec3(-1.22,.52,18),vec3(.24,.4,.3),.03),-box(vec3(p.x+.97,mod(p.y-.14,.19)-.095,p.z-18.),vec3(.01,.003,.27),0.));
+   float f=min(box(p-vec3(-.94,.84,18),vec3(.015,.015,.22),.01),length(vec2(length(vec2(p.x+1.22,abs(p.z-18.)-.24))-.0,p.y-.05))-.05);
+   if(c<d){d=c;m=8.;}if(f<d){d=f;m=10.;}}
+ }
+ if(p.x>.7){
+  if(abs(p.z-15.)<1.3){                                                         // a stretcher, its pillow; an IV pole
+   vec3 q=vec3(abs(p.x-1.05)-.26,p.y,abs(p.z-14.95)-.84);
+   float c=box(p-vec3(1.05,.74,14.95),vec3(.3,.06,.93),.05),k=box(p-vec3(1.05,.83,15.68),vec3(.22,.04,.14),.04);
+   float f=min(min(box(p-vec3(1.05,.64,14.95),vec3(.31,.025,.95),.01),box(q-vec3(0,.33,0),vec3(.015,.3,.015),.005)),max(length(q.yz-vec2(.06,0))-.055,abs(q.x)-.02));
+   vec3 v=p-vec3(1.36,0,16.2);
+   f=min(f,min(max(length(v.xz)-.012,abs(v.y-.95)-.92),max(length(v.xz)-.2,abs(v.y-.05)-.015)));
+   f=min(f,tor(v-vec3(0,1.86,0),.07,.007));
+   float bg=ell(v-vec3(-.07,1.66,0),vec3(.06,.11,.025));
+   if(c<d){d=c;m=8.;}if(k<d){d=k;m=12.;}if(f<d){d=f;m=3.;}if(bg<d){d=bg;m=8.;}}
+  if(abs(p.z-20.3)<.3){                                                         // a red extinguisher on its bracket
+   vec3 v=p-vec3(1.38,0,20.3);
+   float c=min(max(length(v.xz)-.075,abs(v.y-.5)-.26)-.01,max(length(v.xz)-.025,abs(v.y-.82)-.06));
+   if(c<d){d=c;m=13.;}}
+  float sc=box(p-vec3(1.49,1.62,15),vec3(.02,.27,.46),.015);                    // a monitor on the wall
+  if(sc<d){d=sc;m=9.;}
+ }
+ for(int i=0;i<5;i++){float fi=float(i),sd=mod(fi,2.)*2.-1.;                   // sanitiser beside each door
+  float c=box(p-vec3(sd*1.47,1.22,9.8+fi*3.),vec3(.04,.09,.05),.012);if(c<d){d=c;m=8.;}}
  return d;
 }
 // cables along the strange passage, all heading for the doors of her room
@@ -151,8 +181,12 @@ float racks(vec3 p){                       // behind the glass partition
  vec3 r=p-vec3(-4.35,1.3,0.);r.z=mod(r.z+.9,1.8)-.9;
  return box(r,vec3(.35,1.3,.7),.03);
 }
+// far behind her the long corridor twists about its axis; her own body is never touched (U[66].y)
+float twa(float z){return U[66].y*smoothstep(U[4].z-4.,U[4].z-22.,z);}
+vec3 twp(vec3 p){p.xy=rot(twa(p.z))*(p.xy-vec2(0,1.6))+vec2(0,1.6);return p;}
 float map(vec3 p){
  if(TESTMODE||gCharOnly)return android(p);
+ vec3 o=p;if(U[66].y!=0.)p=twp(p);
  float d,m=1.;
  d=-min(airRoom(p),airCorr(p));
  float x=box(p-vec3(-3.25,2.,-.5),vec3(.03,2.,.03),0.);            // glass mullions
@@ -166,9 +200,9 @@ float map(vec3 p){
  x=pod(p);if(x<d){d=x;m=8.;}
  x=machines(p);if(x<d){d=x;m=8.;}
  {float cm;x=cables(p,cm);if(x<d){d=x;m=cm;}}
- x=android(p);if(x<d){d=x;m=gM;}
+ x=android(o);if(x<d){d=x;m=gM;}
  gM=m;
- return d;
+ return U[66].y!=0.?d*.7:d;                  // the twist stretches distances: shorter steps
 }
 vec3 env(vec3 d){
  vec3 c=vec3(.5,.52,.55)*(.3+.25*d.y)*LIGHTS;
@@ -181,6 +215,7 @@ vec3 env(vec3 d){
 vec3 emis(vec3 p,vec3 n,float m){
  vec3 e=vec3(0);
  if(TESTMODE)return e;
+ if(U[66].y!=0.){n.xy=rot(twa(p.z))*n.xy;p=twp(p);}
  if(p.y>3.98&&p.z<6.){vec2 g=abs(fract((p.xz+vec2(0,.5))/vec2(2.5,3.))-.5);
   e+=vec3(3.,3.05,3.1)*(1.-smoothstep(.3,.32,max(g.x,g.y)))*LIGHTS;}
  e+=vec3(4.,4.1,4.3)*(1.-smoothstep(.0,.02,tor(p-vec3(0,3.95,-1.2),1.3,.04)))*LIGHTS;          // halo above the pod
@@ -193,6 +228,10 @@ vec3 emis(vec3 p,vec3 n,float m){
   e+=vec3(.2,1.,.45)*(1.-smoothstep(.012,.02,abs(p.x+.62)))*step(p.y,.002)*step(6.,p.z)*.9*LIGHTS;
   vec3 dl=vec3(abs(p.x)-1.47,p.y-1.45,mod(p.z-9.,3.)-.75);
   e+=vec3(.2,1.,.45)*(1.-smoothstep(.01,.016,length(dl)))*3.;
+  if(m==9.&&p.x>1.4&&abs(p.z-15.)<.44&&abs(p.y-1.62)<.25){                   // the monitor: a pulse, and lines of figures
+   vec2 w=vec2(p.z-15.,p.y-1.62);float x=fract(w.x*.9-U[0].x*.35);
+   e+=vec3(.2,1.,.5)*(1.-smoothstep(.004,.009,abs(w.y-.08-.09*exp(-pow((x-.5)*30.,2.))*sin(x*80.))))*1.5;
+   e+=vec3(.3,.7,1.)*step(.5,h2(floor(vec2(w.x*30.,w.y*28.))+floor(U[0].x)))*step(w.y,-.02)*step(.35,fract(w.y*28.))*.6;}
  }
  if(abs(p.z-25.86)<.1&&abs(p.x)<.7&&p.y<2.25)                                 // her voice leaks through the seams of the access
   e+=vec3(5.,2.,7.)*U[11].z*(exp(-(abs(p.x)-U[15].z*.64)*120.)*2.+.05)*(1.-U[15].z);
@@ -457,7 +496,7 @@ vec3 world(vec3 ro,vec3 rd,vec4 pl,float ty,float ri,float rO,float tilt,inout f
   col+=(atm*(max(sd+.35,0.)*.7+fs*3.)+vec3(1.,.45,.2)*exp(-pow(sd/.15,2.))*.9)*exp(-dm/(pl.w*.025))*.6;}
  // rings
  if(rO>0.){
-  vec3 rn=normalize(vec3(sin(tilt),cos(tilt),.25));
+  vec3 rn=normalize(vec3(sin(tilt),cos(tilt),U[67].z));
   float tr=dot(pl.xyz-ro,rn)/dot(rd,rn);
   if(tr>0.){vec3 rp=ro+rd*tr-pl.xyz;float r=length(rp);
    if(r>ri&&r<rO){
@@ -466,7 +505,7 @@ vec3 world(vec3 ro,vec3 rd,vec4 pl,float ty,float ri,float rO,float tilt,inout f
     den*=1.-.85*smoothstep(.44,.46,u)*(1.-smoothstep(.49,.51,u));      // a division
     // shadow of the planet on the ring
     vec3 w=rp;float bb=dot(w,sun),sh=step(0.,bb)+step(pl.w*pl.w,dot(w,w)-bb*bb)>0.?1.:0.;
-    vec3 rc=mix(vec3(.95,.86,.72),vec3(.72,.76,.85),vn2(vec2(u*13.,3.5)))*den*(.15+.9*sh)*(.7+.9*abs(dot(rn,sun))+2.*pow(max(dot(rd,sun),0.),8.));   // backlit ice glows
+    vec3 rc=mix(vec3(.95,.86,.72),vec3(.72,.76,.85),vn2(vec2(u*13.,3.5)))*den*(.15+.9*sh)*(.9+.9*abs(dot(rn,sun))+2.*pow(max(dot(rd,sun),0.),8.));   // backlit ice glows
     float a=den*.85;
     if(tr<tp)col=mix(col,rc,a);else col+=rc*a*(tp>1e19?1.:0.);
     tMin=min(tMin,tr);
@@ -573,6 +612,8 @@ vec3 shade(vec3 p,vec3 rd,float t,float m){
  if(m==6.){alb=vec3(.12,.13,.14);rough=.3;}
  if(m==8.){alb=vec3(.93);rough=.2;}
  if(m==10.){alb=vec3(.52,.51,.49);rough=.25;}
+ if(m==12.){alb=vec3(.3,.4,.48);rough=.8;}                  // upholstery
+ if(m==13.){alb=vec3(.62,.05,.04);rough=.2;}                 // an extinguisher
  if(m==11.){alb=vec3(.2,.035,.033)*(.8+.35*vn(vec3(p.x*500.,p.y*40.,p.z*500.)));rough=.4;}      // muscle fibres
  if(m==9.){alb=vec3(.08,.085,.09);rough=.3;if(length(hR*(p-hP))<.12)alb=vec3(.035,.03,.032);}   // mouth interior
  if(m==1.&&p.y>.001&&p.y<3.99){      // wall panel seams
