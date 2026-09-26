@@ -181,10 +181,26 @@ float cybody(vec3 p){
    d=min(d,cap(p,vec3(s*.24,1.83,40.1),vec3(s*1.3,7.5,40.4),.008));}}
  vec3 mq=p-vec3(0,.8,40.26);mq.x=abs(mq.x);
  x=box(mq,vec3(.24,.8,.36),.05);                                             // the machine housing
+ x=groove(x,mod(p.y+.06,.26)-.13,.004,.006);                                 // bands and panel seams
+ x=groove(x,min(abs(mq.x-.12),abs(mq.z+.12)),.002,.004);
+ x=min(x,box(mq+vec3(0,.76,0),vec3(.33,.04,.46),.02));                       // a stepped plinth
  x=max(x,-box(mq-vec3(0,.8,-.1),vec3(.17,.06,.17),.04));                    // its mouth, where her body enters
  x=min(x,box(mq-vec3(.41,1.,.06),vec3(.045,.34,.28),.03));                   // side braces
  x=min(x,box(p-vec3(0,1.78,40.2),vec3(.37,.26,.025),.02));                  // backrest between the braces
  if(x<d){d=x;m=9.;}
+ if(length(p.xz-vec2(0,40.2))<2.&&p.y<1.7){                                 // cables draped over it, plugged into the floor
+  float c=1e5,k=1e5;
+  vec3 w=p-vec3(0,0,40.26);                                                  // a skin of cables wrapped down its faces
+  float wx=clamp(floor(w.x/.05+.5)*.05,-.2,.2),wz=clamp(floor(w.z/.05+.5)*.05,-.3,.3),wy=max(abs(w.y-.83)-.75,0.);
+  c=min(length(vec3(w.x-wx-.006*sin(w.y*9.+wx*40.),wy,w.z+.371)),length(vec3(abs(w.x)-.251,wy,w.z-wz-.006*sin(w.y*8.+wz*50.))))-.011;
+  for(int i=0;i<20;i++){float fi=float(i),a=(fi/19.-.5)*4.4+.08*sin(fi*7.),h=h1(fi*3.7);   // and peeling off onto the floor
+   vec3 A=vec3(sin(a)*.26,1.5-1.1*h*h,40.26-cos(a)*.38),R=vec3(sin(a*1.1)*(.75+.7*h),.025,40.26-cos(a*1.1)*(.8+.65*h));
+   vec3 M=vec3(A.x*1.12,.03,mix(A.z,R.z,.15)),o=A;
+   for(int j=1;j<=5;j++){float u=float(j)*.2;vec3 n=mix(mix(A,M,u),mix(M,R,u),u);c=min(c,cap(p,o,n,.013+.01*h1(fi)));o=n;}
+   k=min(k,cyl(p-R-vec3(0,-.01,0),.04,.02)-.004);}
+  if(c<d){d=c;m=6.;}
+  if(k<d){d=k;m=3.;}
+ }
  x=tor(p-vec3(0,1.6,40.08),.14,.018);                                        // a collar ring at her waist
  for(int i=0;i<2;i++){float s=float(i)*2.-1.;                                // clamps gripping her arms
   x=min(x,min(cap(p,vec3(s*.37,1.77,40.1),vec3(s*.29,1.76,40.08),.018),tor((p-vec3(s*.28,1.77,40.075)).yxz,.043,.009)));}
