@@ -394,10 +394,13 @@ static void th_bed(void *u)
 #ifndef ATILT
 #define ATILT 0.62f
 #endif
+#ifndef BALPHA
+#define BALPHA 0.9f
+#endif
 static const VStyle vstyle[5] = {
     /* alpha tilt breath vibr vibd sub dual dualint gain legato */
     { AALPHA, ATILT, 0.14f, 5.3f, 0.16f, 0.00f, 0.0f, 0, 0.60f, 0.82f },  /* A android: clear, airy, not shrill */
-    { 0.86f, 1.00f, 0.05f, 4.7f, 0.28f, 0.30f, 0.0f, 0, 0.60f, 0.95f },  /* B cyborg: lower tract, sub-harmonic depth */
+    { BALPHA, 1.00f, 0.05f, 4.7f, 0.28f, 0.30f, 0.0f, 0, 0.60f, 0.95f },  /* B cyborg: lower tract, sub-harmonic depth */
     { 0.93f, 0.85f, 0.09f, 5.0f, 0.20f, 0.00f, 0.6f, -12, 0.58f, 0.85f }, /* C merged: one tract, two glottal sources */
     { 0.97f, 0.70f, 0.35f, 4.2f, 0.10f, 0.00f, 0.0f, 0, 0.14f, 0.90f },  /* ghost */
 };
@@ -417,19 +420,19 @@ static void th_voice(void *u)
     int l, wi = 0, ni = 0; (void)u;
     voice_init();
     for (l = 0; l < NVL; l++) {
-        short w[32]; int i, v = vl_voice[l], nn = vl_nn[l];
-        for (i = 0; i < vl_nw[l]; i++) w[i] = vl_words[wi + i];
-        wi += vl_nw[l];
+        short w[32], wb[32]; int i, v = vl_voice[l], nn = vl_nn[l];
+        for (i = 0; i < vl_nw[l]; i++) w[i] = vl_words[wi + i], wb[i] = vl_words[wi + i + (v == 2) * vl_nw[l]];   /* a duo lists both speakers' words */
+        wi += vl_nw[l] * (1 + (v == 2));
         if (v == 0) sing(T_VA, w, vl_nw[l], vl_notes + ni * 3, nn, vl_bar[l], &vstyle[0], mouth_a);
         if (v == 1) sing(T_VB, w, vl_nw[l], vl_notes + ni * 3, nn, vl_bar[l], &vstyle[1], mouth_b);
         if (v == 3) { sing(T_VA, w, vl_nw[l], vl_notes + ni * 3, nn, vl_bar[l], &vstyle[2], mouth_a); }
         if (v == 2) {
             sing(T_VA, w, vl_nw[l], vl_notes + ni * 3, nn, vl_bar[l], &vstyle[0], mouth_a);
-            sing(T_VB, w, vl_nw[l], vl_notes + (ni + nn) * 3, nn, vl_bar[l], &vstyle[1], mouth_b);
+            sing(T_VB, wb, vl_nw[l], vl_notes + (ni + nn) * 3, nn, vl_bar[l], &vstyle[1], mouth_b);
             if (vl_bar[l] == 130 || vl_bar[l] == 147 || vl_bar[l] == 149) {   /* the phantom third voice */
                 unsigned char g[96];
                 for (i = 0; i < nn * 3; i++) g[i] = vl_notes[ni * 3 + i] + (i % 3 == 0 ? 7 : 0);
-                sing(T_VB, w, vl_nw[l], g, nn, vl_bar[l], &vstyle[3], 0);
+                sing(T_VB, wb, vl_nw[l], g, nn, vl_bar[l], &vstyle[3], 0);
             }
             ni += nn;
         }

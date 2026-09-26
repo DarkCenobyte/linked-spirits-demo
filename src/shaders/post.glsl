@@ -49,6 +49,10 @@ void main(){
  vec2 e=(p-.5)*(.004+.012*sp)*length(p-.5);
  c.r=mix(c.r,texture(A,p+e).r,.5);c.b=mix(c.b,texture(A,p-e).b,.5);
  c+=texture(B,p).rgb*.07;
+ // anamorphic lens: the brightest lights draw thin horizontal streaks, slightly blue
+ vec3 st=vec3(0);
+ for(int i=-14;i<=14;i++)st+=max(texture(B,vec2(p.x+float(i)*.011,p.y)).rgb-1.6,0.)*exp(-abs(float(i))*.2);
+ c+=st*vec3(.3,.5,1.)*.025;
  // exposure / grade
  c=aces(c*.9);
  float g=U[3].w;

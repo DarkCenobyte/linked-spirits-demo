@@ -76,6 +76,9 @@ static void lsf_fix(float *l)
     if (l[15] > 3.13f) l[15] = 3.13f;
 }
 
+#ifndef VB_EH
+#define VB_EH 4
+#endif
 void voice_init(void)
 {
     const unsigned char *p = vb_blob, *nph = p, *nk = p + VB_WORDS, *ph, *du, *gp, *rm, *cf;
@@ -84,7 +87,7 @@ void voice_init(void)
     ph = nk + VB_WORDS; du = ph + np; gp = du + np + VB_WORDS;
     for (w = 0; w < VB_WORDS; w++) {
         int n = 1; for (i = 0; i < nk[w] - 1; i++) n += gp[ngp + i];
-        ngp += nk[w] - 1; nrm += (n + 3) >> 2;
+        ngp += nk[w] - 1; nrm += (n + VB_EH - 1) / VB_EH;
     }
     rm = gp + ngp; cf = rm + nrm;
     {
@@ -113,12 +116,12 @@ void voice_init(void)
                     for (i = 0; i < 16; i++) vf_l[fr + t][i] = L[k][i] + (L[k + 1][i] - L[k][i]) * u;
                 }
             if (nk[w] == 1) for (i = 0; i < 16; i++) vf_l[fr][i] = L[0][i];
-            /* energy: log2 steps every 4 frames */
+            /* energy: log2 steps every VB_EH frames */
             {
-                float lg[256]; int m = (n + 3) >> 2;
+                float lg[256]; int m = (n + VB_EH - 1) / VB_EH;
                 for (k = 0; k < m; k++) { rq += (signed char)*r++; lg[k] = rq * (VB_RDB / 6.02f); }
                 for (t = 0; t < n; t++) {
-                    int a = t >> 2; float u = (t & 3) * 0.25f;
+                    int a = t / VB_EH; float u = (float)(t % VB_EH) / VB_EH;
                     float v = a + 1 < m ? lg[a] + (lg[a + 1] - lg[a]) * u : lg[m - 1];
                     vf_g[fr + t] = exp2f(v);
                 }

@@ -34,23 +34,33 @@ the same.
 
 | file | bytes |
 |---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 178 176 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **79 360** (77.5 KiB) |
+| `linked_spirits.exe` (raw, CRT-free) | 228 352 |
+| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **101 888** (99.5 KiB) |
 
-This is above the 64 KiB ideal and well inside the 256 KiB limit. Artistic
-quality came first. Most of the bytes above 64 KiB went into the cyborg
-(her body, the machine and the cable dome of the cathedral), the dissolution
-of the world, the astral world (galaxy, discs of light, skies) and the sung
-lyrics on screen. Going under 64 KiB would mean cutting the voice bank
-(≈ 20 KB packed) and with it the intelligibility of the singing.
+Artistic quality came first. At 77.5 KiB, going under 64 KiB would have
+meant cutting the voice bank and with it the intelligibility of the singing,
+so 128 KiB was taken as the ceiling instead, and the extra room was spent
+where it shows most:
+
+* **the voices** (+22 KB): finer spectral keyframes and quantisation, a 10 ms
+  energy track, and a second source speaker for the cyborg. The word error
+  rate of the sung lyrics fell from 14.7% to the figures below;
+* **the astral world**: a galaxy of a quarter of a million points, discs of
+  light, a sky with a galactic band, nebulae and diffraction spikes, planets
+  with sunsets and rings of fire;
+* **the lyrics on screen**, and an anamorphic streak on the brightest lights.
+
+Before that, the bytes above 64 KiB had gone into the cyborg (her body, the
+machine and the cable dome of the cathedral) and the dissolution of the
+world.
 
 Where the packed bytes go (LZMA estimates):
 
 | part | raw | compressed |
 |---|---|---|
 | x86-64 code (director, synth, voice, platform) | 63 KB | ≈ 31 KB |
-| singing-voice bank (54 sung lines, 3 voices) + lyrics text | 51 KB | ≈ 21 KB |
-| GLSL (minified, 8 sources, 7 programs) | 48.2 KB | ≈ 17 KB |
+| singing-voice bank (54 sung lines, 2 speakers) + lyrics text | 101 KB | ≈ 43 KB |
+| GLSL (minified, 8 sources, 7 programs) | 48.4 KB | ≈ 17 KB |
 | score, tables, GL names, constants | ≈ 6 KB | ≈ 4 KB |
 
 ## Storyboard
@@ -152,10 +162,14 @@ Three synthetic female voices sing 54 lines of lyrics:
 
 At build time, each line is spoken by a neural TTS (Kokoro, via sherpa-onnx)
 and aligned by DTW to an MBROLA rendering of the same phonemes (which gives
-phoneme boundaries). It is then analysed into 16th-order LPC → line spectral
-frequencies. Variable-frame-rate keyframes are least-squares fitted and
-projected on 16 PCA components with uniform quantisation, plus a 20 ms energy
-track. That is 49 KB for the whole libretto.
+phoneme boundaries). The two characters have two different source speakers:
+the android's words come from one voice (`af_bella`), the cyborg's (her lines
+and her part of every duet) from a darker one (`bf_emma`), so they differ in
+their very timbre, not only by a formant shift. Each rendering is analysed
+into 16th-order LPC → line spectral frequencies. Variable-frame-rate
+keyframes are least-squares fitted and projected on 16 PCA components with
+uniform quantisation, plus a 10 ms energy track. That is 99 KB (≈ 42 KB
+packed) for the whole libretto, both speakers.
 
 At run time the voice is re-synthesised:
 
@@ -184,19 +198,18 @@ reverb is kept low on the voices, except for the distant cyborg.
 rendered by the final build (music and voices together). Word error rate
 of the transcript against the lyrics, over all 54 sung lines:
 
-| test | WER |
-|---|---|
-| full mix, lines in pairs, Whisper `small.en` | **14.7%** |
-| full mix, each line alone, `small.en` | 15.7% |
-| full mix, lines in pairs, `base.en` | 20.1% |
+| test | before (one speaker, coarser bank) | now |
+|---|---|---|
+| full mix, lines in pairs, Whisper `small.en` | 14.7% | **9.6%** |
+| full mix, each line alone, `small.en` | 15.7% | 13.3% |
+| full mix, lines in pairs, `base.en` | 20.1% | 15.4% |
 
-Most remaining errors are near-homophones ("*I used that tone*" for "*I know
-that tone*"). Whisper sometimes also stops after the first line of a pair: of
-"*Between the red and blue / there is a color without a name*" it keeps only
-the first half, although the second line alone is transcribed without an
-error. The final couplet, sung by the merged voice over thinned-out pads,
-comes back with a single error: "*I wake with memories not my own, and hear
-the name they never knew*".
+Most remaining errors are near-homophones or single phonemes: "*I knew that
+tune*" for "*I know that tone*", "*what makes maybe another thing*" for
+"*what wakes may be another thing*", "*I make with memories not my own*" for
+"*I wake…*". In her solo lines the cyborg's "*voice*", which the
+single-speaker bank turned into "*force*", is now heard right; in one duet
+("*Between your voice and mine*") it still becomes "*the two forces*".
 
 ### Music: `tools/score.py`, `src/synth.c`
 
