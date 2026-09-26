@@ -33,21 +33,21 @@ the same.
 
 | file | bytes |
 |---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 158 208 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **70 144** (68.5 KiB) |
+| `linked_spirits.exe` (raw, CRT-free) | 161 280 |
+| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **71 168** (69.5 KiB) |
 
 This is above the 64 KiB ideal and well inside the 256 KiB limit. Artistic
-quality came first. Most of the bytes above 64 KiB went into the cyborg,
-the cable dome of the cathedral and the one-piece armour of light of the
-astral bodies.
+quality came first. Most of the bytes above 64 KiB went into the cyborg
+(her body, the machine and the cable dome of the cathedral), the dissolution
+of the world and the one-piece armour of light of the astral bodies.
 
 Where the packed bytes go (LZMA estimates):
 
 | part | raw | compressed |
 |---|---|---|
-| x86-64 code (director, synth, voice, platform) | 58.4 KB | ≈ 28 KB |
+| x86-64 code (director, synth, voice, platform) | 59.1 KB | ≈ 28.3 KB |
 | singing-voice bank (54 sung lines, 3 voices) | 49.3 KB | ≈ 20 KB |
-| GLSL (minified, 8 sources, 7 programs) | 37.5 KB | ≈ 13.7 KB |
+| GLSL (minified, 8 sources, 7 programs) | 40.0 KB | ≈ 14.5 KB |
 | score, tables, GL names, constants | ≈ 6 KB | ≈ 4 KB |
 
 ## Storyboard
@@ -64,7 +64,7 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 | 2:48 | She pushes the doors; white light floods in. |
 | 2:53 | **The cathedral**: a nave of vertebral ribs and cables. At its end, a gigantic dome of woven cables with a face at its apex. Extreme close-up: the left eye opens **blue**, then the right one **red**, on an impact. |
 | 3:07 | **The sung dialogue**. The cyborg's worn face is set into the mass of cables. Below it hangs a body of worn plates over exposed muscle, arms ending in torn wires, hung from the vault and sunk into a machine. |
-| 3:50 | The android reaches up and takes the torn stump of her arm. **The contact wave**, violet, spreads from the touch; the world comes apart into points of light. |
+| 3:50 | The android reaches up and takes the torn stump of her arm. A blue point of light appears under her finger, then a red one; a pulse runs up her arm, and **the contact wave**, a red/blue interference front, spreads through the cathedral. Then **the world dissolves**: every visible surface (the cables, the cyborg, the android) turns into points of light in its own colours, released by a front sweeping out from the touch, rising like embers into the dark. |
 | 4:10 | **Astral bodies**: a blue body of particles (android) with a green gorget and pauldrons; a taller red body (cyborg) with vivid blue ones. Her hand on the android's shoulder. |
 | 4:24 | **The journey**: acceleration, streaks of stars; an Earth-like world, a desert world, a gas giant whose rings they fly through (an ocean of fragments), an ocean world. |
 | 4:34 | **Duo** (voices A and B together). |
@@ -88,6 +88,13 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
   emissive systems (screens, ceiling strips, the voice-driven light).
 * **Particles**: a vertex shader turns `gl_VertexID` into motes of light,
   bodies of light, star fields, ring fragments and structures of light.
+* **The dissolution of the world** is built from a snapshot:
+  * the frame at the chosen moment is rendered once more (the director is a
+    pure function of time) into a colour + ray-distance target;
+  * a quarter of a million particles rebuild every visible surface from it,
+    each carrying the energy of the pixels it replaces;
+  * a front from the touch releases them, and each surface of the live render
+    lets go on the same clock.
   Streaks are a second `GL_LINES` pass. Sprites are depth-tested against the
   scene depth and get bokeh discs from the circle of confusion.
 * **Post**: a 6-level bloom pyramid, a 40-tap gather depth of field weighted by
@@ -150,13 +157,20 @@ The music never masks the words. The voices duck the instruments, a
 dynamic EQ carves room for them, and a presence boost is applied. The
 reverb is kept low on the voices.
 
-**Intelligibility check** (Whisper `small.en` via sherpa-onnx, on the
-soundtrack rendered by the final build, lyrics compared with the transcript):
-see the table below.
+**Intelligibility check**: Whisper via sherpa-onnx, run on the soundtrack
+rendered by the final build (music and voices together). Word error rate
+of the transcript against the lyrics, over all 54 sung lines:
 
 | test | WER |
 |---|---|
-| full mix, lines in pairs, `small.en` | *(filled in below)* |
+| full mix, lines in pairs, Whisper `small.en` | **13.0%** |
+| full mix, each line alone, `small.en` | 19.8% |
+| full mix, lines in pairs, `base.en` | 33.4% |
+
+Most remaining errors are near-homophones ("*I knew that tune*" for "*I know
+that tone*"). The final couplet, sung by the merged voice over thinned-out
+pads, is transcribed with a single error: "*I wake with memories not my own,
+and hear the name they never knew*".
 
 ### Music: `tools/score.py`, `src/synth.c`
 
