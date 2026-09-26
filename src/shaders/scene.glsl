@@ -87,18 +87,45 @@ float cables(vec3 p){
 }
 // air of the white room (rounded "infinity cove") + corridor; the solid is its complement
 float airRoom(vec3 p){return box(p-vec3(0,2.,.5),vec3(5.,2.,6.),.7);}
+// the corridor: first clean and medical (z 5.5..25.5, flat floor), then a sealed access, then the
+// strange passage (z 26..58): ribs on its walls and ceiling, twisting and growing as she goes (U[15].y)
 float airCorr(vec3 p){
- float s=U[15].y,z=p.z-6.;
+ float s=U[15].y,zz=p.z-26.,g=max(zz-4.,0.);
+ float a=box(p-vec3(0,1.45,15.5),vec3(1.5,1.45,10.),.14);                    // medical corridor
+ for(int i=0;i<5;i++){float fi=float(i),zd=9.+fi*3.,sd=mod(fi,2.)*2.-1.;       // recessed side doors
+  a=min(a,box(p-vec3(sd*1.55,1.07,zd),vec3(.1,1.07,.52),.02));}
+ a=min(a,box(p-vec3(0,1.1,25.85),vec3(.66,1.1,.5),.02));                      // the doorway of the access
  vec3 r=p;
- r.xy=rot(s*.012*max(z-12.,0.)*sin(z*.045)*(1.-smoothstep(40.,50.,z)))*(r.xy-vec2(0,1.5))+vec2(0,1.5);   // it slowly twists
- float wd=1.5+s*max(z-18.,0.)*.035,ht=3.+s*max(z-18.,0.)*.14;
- float a=box(vec3(r.x,r.y-ht*.5,z-27.),vec3(wd,ht*.5,33.2),.3);
- float rz=abs(mod(z,2.4)-1.2)-.09;
- float rib=max(max(rz,-box(vec3(r.x,r.y-ht*.5,0),vec3(wd-.14,ht*.5-.14,1.),.25)),z-51.);
- return max(a,-rib)*(1.-.45*s);    // the twist bends the field: keep it conservative
+ r.xy=rot(s*.012*g*sin(zz*.07)*(1.-smoothstep(24.,30.,zz)))*(r.xy-vec2(0,1.5))+vec2(0,1.5);   // it slowly twists
+ float wd=1.5+s*g*.035,ht=3.+s*g*.14;
+ float c=box(vec3(r.x,r.y-ht*.5,zz-16.),vec3(wd,ht*.5,16.2),.3);
+ float rz=abs(mod(zz,2.4)-1.2)-.09;
+ float rib=max(max(rz,-box(vec3(r.x,r.y-ht*.5,0),vec3(wd-.14,ht*.5-.14,1.),.25)),zz-25.);
+ c=min(max(c,-rib),box(p-vec3(0,.6,42.),vec3(1.3,.6,16.),.05));              // ribs on walls and ceiling, a flat walkway
+ return min(a,max(c*(1.-.45*s),-zz));
+}
+// inside the medical corridor: handrails, door panels with their windows, the access panels
+float medical(vec3 p,out float m){
+ m=3.;
+ float d=max(length(vec2(abs(p.x)-1.43,p.y-.92))-.022,abs(p.z-16.1)-8.9);    // handrails
+ d=min(d,max(length(vec2(abs(p.x)-1.47,p.y-.92))-.012,max(abs(mod(p.z,1.6)-.8)-.012,abs(p.z-16.1)-8.9)));
+ float dp=1e5,wn=1e5;
+ for(int i=0;i<5;i++){float fi=float(i),zd=9.+fi*3.,sd=mod(fi,2.)*2.-1.;
+  vec3 q=p-vec3(sd*1.63,1.07,zd);
+  dp=min(dp,box(q,vec3(.02,1.05,.5),.01));
+  wn=min(wn,box(q-vec3(-sd*.02,.45,0),vec3(.012,.2,.12),.01));}
+ dp=max(dp,-wn);
+ if(dp<d){d=dp;m=8.;}
+ if(wn<d){d=wn;m=9.;}
+ float op=U[15].z;                                                            // the access: two panels slide into the wall
+ float hp=box(vec3(abs(p.x)-.31-op*.64,p.y-1.1,p.z-25.86),vec3(.305,1.1,.035),.01);
+ if(hp<d){d=hp;m=8.;}
+ float fr=max(box(p-vec3(0,1.1,25.82),vec3(.72,1.16,.03),.01),-box(p-vec3(0,1.1,25.82),vec3(.64,1.1,.2),0.));
+ if(fr<d){d=fr;m=3.;}
+ return d;
 }
 float doors(vec3 p){
- float s=U[15].y,wd=1.5+s*1.19,ht=3.+s*4.76,a=U[12].w*1.35;
+ float s=U[15].y,wd=1.5+s*.98,ht=3.+s*3.92,a=U[12].w*1.35;
  vec3 r=p-vec3(0,0,58.);
  vec3 l=r+vec3(wd,0,0);l.xz=rot(-a)*l.xz;
  float d=box(l-vec3(wd*.5,ht*.5,.07),vec3(wd*.5-.006,ht*.5,.07),.02);
@@ -120,6 +147,7 @@ float map(vec3 p){
  if(x<d){d=x;m=3.;}
  x=racks(p);if(x<d){d=x;m=9.;}
  if(p.z>50.){x=doors(p);if(x<d){d=x;m=8.;}}
+ if(p.z>5.&&p.z<26.2){float mm;x=medical(p,mm);if(x<d){d=x;m=mm;}}
  x=pod(p);if(x<d){d=x;m=8.;}
  x=machines(p);if(x<d){d=x;m=8.;}
  x=cables(p);if(x<d){d=x;m=6.;}
@@ -143,7 +171,17 @@ vec3 emis(vec3 p,vec3 n,float m){
  e+=vec3(4.,4.1,4.3)*(1.-smoothstep(.0,.02,tor(p-vec3(0,3.95,-1.2),1.3,.04)))*LIGHTS;          // halo above the pod
  if(p.z>58.2)e+=vec3(9.,9.2,9.5)*(.2+U[12].w*2.)+vec3(5.,2.,7.)*U[11].z;
  if(p.z>57.8)e+=vec3(5.,2.,7.)*U[11].z*(exp(-abs(p.x)*60.)*4.+.12);            // her distant voice leaks through the doors
- if(p.z>6.&&p.z<57.){float rz=abs(mod(p.z-6.,2.4)-1.2);
+ if(p.z>5.5&&p.z<25.6){                                                    // the medical corridor
+  e+=vec3(.36,.37,.38)*step(n.y,-.5)*LIGHTS;                                   // light bounced from the floor onto the white ceiling
+  vec2 g=vec2(abs(p.x),abs(mod(p.z-6.,2.4)-1.2));
+  e+=vec3(3.,3.05,3.1)*(1.-smoothstep(0.,.02,max(g.x-.5,g.y-.62)))*step(2.86,p.y)*LIGHTS;
+  e+=vec3(.2,1.,.45)*(1.-smoothstep(.012,.02,abs(p.x+.62)))*step(p.y,.002)*step(6.,p.z)*.9*LIGHTS;
+  vec3 dl=vec3(abs(p.x)-1.47,p.y-1.45,mod(p.z-9.,3.)-.75);
+  e+=vec3(.2,1.,.45)*(1.-smoothstep(.01,.016,length(dl)))*3.;
+ }
+ if(abs(p.z-25.86)<.1&&abs(p.x)<.7&&p.y<2.25)                                 // her voice leaks through the seams of the access
+  e+=vec3(5.,2.,7.)*U[11].z*(exp(-(abs(p.x)-U[15].z*.64)*120.)*2.+.05)*(1.-U[15].z);
+ if(p.z>26.&&p.z<57.){float rz=abs(mod(p.z-6.,2.4)-1.2);
   e+=(vec3(2.,2.1,2.2)*LIGHTS+vec3(2.4,.8,3.6)*U[11].z*smoothstep(25.,57.,p.z))*(1.-smoothstep(.03,.05,rz))*step(.2,p.y);}
  if(p.x<-4.){vec2 g=fract(vec2(p.z*8.,p.y*12.));float on=step(.6,h2(floor(vec2(p.z*8.,p.y*12.))+floor(U[0].x*3.)*.37));
   e+=vec3(.1,1.,.35)*on*(1.-smoothstep(.1,.2,length(g-.5)))*3.*step(-4.01,-p.x);}
@@ -500,7 +538,7 @@ vec3 shade(vec3 p,vec3 rd,float t,float m){
  if(m==11.){alb=vec3(.2,.035,.033)*(.8+.35*vn(vec3(p.x*500.,p.y*40.,p.z*500.)));rough=.4;}      // muscle fibres
  if(m==9.){alb=vec3(.08,.085,.09);rough=.3;if(length(hR*(p-hP))<.12)alb=vec3(.035,.03,.032);}   // mouth interior
  if(m==1.&&p.y>.001&&p.y<3.99){      // wall panel seams
-  vec2 w=abs(p.x)>4.9?p.zy:p.xy;vec2 g=abs(fract(w/vec2(1.5,1.))-.5);
+  vec2 w=abs(p.x)>4.9||(abs(p.x)>1.3&&p.z>6.&&p.z<25.6)?p.zy:p.xy;vec2 g=abs(fract(w/vec2(1.5,1.))-.5);
   alb*=1.-.3*(1.-smoothstep(.0,.004,.5-max(g.x,g.y)));}
  if(m==1.&&p.y<.001){vec2 g=abs(fract(p.xz)-.5);alb*=1.-.15*(1.-smoothstep(0.,.003,.5-max(g.x,g.y)));}
  if(m<=4.){ // lash line on the upper lid margin, painted brows

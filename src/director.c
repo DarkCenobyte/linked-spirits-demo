@@ -253,6 +253,7 @@ static int direct(float t, float *u)
         V3 F = fwdv(yaw), S = sidev(yaw), H;
         u[15 * 4] = 0.12f;                       /* the pod stays upright */
         u[15 * 4 + 1] = strange;
+        u[15 * 4 + 2] = ease((t - 129.6f) / 1.3f);                   /* the access opens on the impact */
         ps.hy = 0.15f * wobble(t * 0.4f, 7);
         if (t > 86.4f && t < 129.6f) {           /* she stops, turns to the wall, listens */
             float k = ease((t - 87) / 2);
@@ -300,9 +301,9 @@ static int direct(float t, float *u)
         } else if (b < 36) {                     /* the hidden currents in the line */
             cam(va(va(H, vs(F, 0.9f)), v3(0.3f, 0.1f, 0)), H, 32);
             setv(3, 0.95f, 0.02f, 0, 0);
-        } else if (b < 38) {                     /* she stops: tiny in the long white corridor */
-            cam(v3(0.2f, 1.2f, H.z + 9), va(H, v3(0, -0.3f, 0)), 36);
-            setv(3, 9, 0.004f, 0, 0);
+        } else if (b < 38) {                     /* she stops: small in the white corridor, the sealed access ahead */
+            cam(v3(0.35f, 1.25f, H.z - 8), va(H, v3(0, -0.2f, 0)), 36);
+            setv(3, 8, 0.004f, 0, 0);
             u[12 * 4] = mixf(1, 0.8f, ease((t - 86.4f) / 4));
         } else if (b < 46) {                     /* the distant voice: a slow push towards her face */
             float k = ease((t - 91.2f) / 19);
@@ -314,10 +315,10 @@ static int direct(float t, float *u)
             cam(va(H, v3(-0.25f, 0.02f, 0.45f)), H, 27);
             setv(3, 0.52f, 0.03f, 0, 0);
             u[12 * 4] = 0.8f;
-        } else if (b < 54) {                     /* You know the wave: towards the far end of the corridor */
+        } else if (b < 54) {                     /* You know the wave: over her shoulder, the access and its violet seams */
             float k = (t - 120) / 9.6f;
-            cam(v3(0.3f * sinf(k * 3), 1.6f, H.z + 1 + k * 14), v3(0, 1.4f, 60), 40);
-            setv(3, 8, 0.004f, 0, 0);
+            cam(v3(0.55f + 0.1f * sinf(k * 3), 1.55f, H.z - 1.6f + k), v3(0, 1.3f, 25.9f), 40);
+            setv(3, 25.9f - H.z, 0.006f, 0, 0);
             u[12 * 4] = 0.8f;
         } else if (b < 58) {                     /* the search: behind her, fast */
             cam(va(va(H, vs(F, -1.6f)), v3(0.25f, 0.1f, 0)), va(H, vs(F, 3)), 38);
