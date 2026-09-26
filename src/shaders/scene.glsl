@@ -141,8 +141,10 @@ vec3 emis(vec3 p,vec3 n,float m){
  if(p.y>3.98&&p.z<6.){vec2 g=abs(fract((p.xz+vec2(0,.5))/vec2(2.5,3.))-.5);
   e+=vec3(3.,3.05,3.1)*(1.-smoothstep(.3,.32,max(g.x,g.y)))*LIGHTS;}
  e+=vec3(4.,4.1,4.3)*(1.-smoothstep(.0,.02,tor(p-vec3(0,3.95,-1.2),1.3,.04)))*LIGHTS;          // halo above the pod
- if(p.z>58.2)e+=vec3(9.,9.2,9.5)*(.2+U[12].w*2.);
- if(p.z>6.&&p.z<57.){float rz=abs(mod(p.z-6.,2.4)-1.2);e+=vec3(2.,2.1,2.2)*(1.-smoothstep(.03,.05,rz))*step(.2,p.y)*LIGHTS;}
+ if(p.z>58.2)e+=vec3(9.,9.2,9.5)*(.2+U[12].w*2.)+vec3(5.,2.,7.)*U[11].z;
+ if(p.z>57.8)e+=vec3(5.,2.,7.)*U[11].z*(exp(-abs(p.x)*60.)*4.+.12);            // her distant voice leaks through the doors
+ if(p.z>6.&&p.z<57.){float rz=abs(mod(p.z-6.,2.4)-1.2);
+  e+=(vec3(2.,2.1,2.2)*LIGHTS+vec3(2.4,.8,3.6)*U[11].z*smoothstep(25.,57.,p.z))*(1.-smoothstep(.03,.05,rz))*step(.2,p.y);}
  if(p.x<-4.){vec2 g=fract(vec2(p.z*8.,p.y*12.));float on=step(.6,h2(floor(vec2(p.z*8.,p.y*12.))+floor(U[0].x*3.)*.37));
   e+=vec3(.1,1.,.35)*on*(1.-smoothstep(.1,.2,length(g-.5)))*3.*step(-4.01,-p.x);}
  vec3 r=p;r.x=abs(r.x);float sd=p.x<0.?0.:1.;

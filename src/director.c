@@ -6,7 +6,7 @@
  *  4 head pos                     5 head yaw, pitch, roll    6 gaze x, gaze y, pupil, blink
  *  7 mouth open, mouth round, iris mode (0 green .. 1 blue/red), eye glow
  *  8 cyborg head pos, reveal      9 cyborg yaw, pitch, blink L, blink R
- * 10 cyborg gaze x, y, pupil, mouth open        11 cyborg mouth round, -, -, -
+ * 10 cyborg gaze x, y, pupil, mouth open        11 cyborg mouth round, -, distant voice (lab)
  * 12 lights, systems, scan line, door open      13 wave origin, radius
  * 14 dissolve, translucency, -, -               15..19 scene specific
  * 20..39 android joints          40..59 second body joints (astral)
@@ -269,6 +269,7 @@ static int direct(float t, float *u)
         setv(63, 1, 0, 0.5f + 0.5f * clampf((t - 100) / 60, 0, 1), 4000 + 20000 * clampf((t - 60) / 90, 0, 1));
         u[6 * 4 + 2] = 0.28f + 0.04f * wobble(t * 0.5f, 11);
         if (t > 109.2f && t < 110.5f) u[6 * 4 + 2] = 0.2f;          /* the pupil contracts */
+        if (b >= 36) mouth(t, mouth_b, 11 * 4 + 2);                  /* the distant voice lights the far end */
         if (b < 18.3f) {                         /* low angle, she leaves the cradle; the music starts */
             cam(v3(0.9f, 0.3f, 3.2f), va(H, v3(0, -0.35f, 0)), 42);
             setv(3, 3.5f, 0.006f, 0, 0);
@@ -492,7 +493,7 @@ static int direct(float t, float *u)
         if (b >= 122 && b < 128) { k = (t - 292.8f) / 14.4f; setv(16, 0, -60 + 58 * k, -300 + 60 * k, 70); setv(17, 3, 90, 190, 0.15f); }
         if (b >= 128 && b < 134) { k = (t - 307.2f) / 14.4f; setv(16, -40, -35, -200 + 180 * k, 60); setv(17, 2, 0, 0, 0); }
         if (b >= 143 && b < 155) { k = (t - 343.2f) / 28.8f; setv(16, 80, -20, -380 + 200 * k, 90); setv(17, 3, 120, 260, -0.35f); setv(15, -120, 40, -600, 60); u[14 * 4] = 1; }
-        if (b >= 155) { setv(15, 0, -1000, 0, 900); u[14 * 4] = 2; setv(16, 500, 380, -1500, 150); setv(17, 3, 200, 520, 0.5f); setv(18, 0.35f, 0.25f, -1, 0.26f); }
+        if (b >= 155) { setv(15, 0, -1000, 0, 900); u[14 * 4] = 2; setv(16, 0, 0, 0, 0); setv(18, 0.35f, 0.25f, -1, 0.26f); }
         spd = b < 110 ? 0 : b < 114 ? ease((t - 264) / 6) : b < 142 ? 1 : b < 143 ? 0 : b < 155 ? 1.3f : 0;
         setv(19, spd, 0.8f, 0, b >= 150 && b < 155 ? sinf(clampf((t - 360) / 12, 0, 1) * 3.14159f) : 0);
         setv(63, b >= 122 && b < 126 && t > 297.6f ? 4 : 3, 0, 1.2f, b >= 122 && b < 126 && t > 297.6f ? 60000 : 90000);

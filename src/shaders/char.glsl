@@ -124,7 +124,7 @@ float body(vec3 p,int B){
   a=min(a,seg(p,E,W,.03,.022,.03,.018));
   if(length(p-W)<.2)a=min(a,hand(p,W,H,U[60+s].xyz,U[60+s].w));
   d=smin(d,a,.012);
-  float jn=min(sph(p-S,.044),min(sph(p-E,.027),sph(p-W,.018)));
+  float jn=min(sph(p-S,.038),min(sph(p-E,.027),sph(p-W,.018)));
   o=B+12+s*4;
   vec3 Hp=U[o].xyz,K=U[o+1].xyz,A=U[o+2].xyz,To=U[o+3].xyz;
   float g=seg(p,Hp,K,.074,.047,0.,.04);
