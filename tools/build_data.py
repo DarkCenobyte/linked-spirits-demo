@@ -56,6 +56,9 @@ def main():
     o.append(carr('vl_words', 'unsigned char', vwords))
     o.append(carr('vl_nn', 'unsigned char', vnn))
     o.append(carr('vl_notes', 'unsigned char', vnotes))
+    # the lyrics as displayed (one line per sung line), for the subtitles
+    txt = '\n'.join(l['text'] for l in lines) + '\n'
+    o.append('static const char vl_text[] = "%s";' % txt.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n'))
     ld = []
     for bar, spec in S.LEAD:
         for tok in spec.split():

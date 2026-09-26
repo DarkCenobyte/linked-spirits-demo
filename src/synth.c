@@ -301,11 +301,11 @@ static void fx_event(int bar, int pos, int kind, int par)
         n = kind == FX_TURN ? SR / 2 : SR / 5;
         for (i = 0; i < n; i++) {
             float t = (float)i / n;
-            bed_add(p + i, svf(&f, rnd(&s), fcut(kind == FX_TURN ? 3000 - 2500 * t : 5000), 3, 1) * sinf(PI * t) * (kind == FX_TURN ? 0.12f : 0.05f), kind == FX_TURN ? 0.6f - t : 0);
+            bed_add(p + i, svf(&f, rnd(&s), fcut(kind == FX_TURN ? 3000 - 2500 * t : 5000), 3, 1) * sinf(PI * t) * (kind == FX_TURN ? 0.12f : kind == FX_BLINK ? 0.017f : 0.05f), kind == FX_TURN ? 0.6f - t : 0);
         }
-        if (kind == FX_BLINK && par >= 1) {
-            grain(p + 3000, mtof(81 + (par == 2 ? 3 : 0)), 0.4f, 0.02f, -0.7f, 0);
-            grain(p + 3000, mtof(74), 0.4f, 0.02f, 0.7f, 0);
+        if (kind == FX_BLINK && par >= 1) {           /* a discreet glint */
+            grain(p + 3000, mtof(81 + (par == 2 ? 3 : 0)), 0.4f, 0.007f, -0.7f, 0);
+            grain(p + 3000, mtof(74), 0.4f, 0.007f, 0.7f, 0);
         }
         break;
     case FX_WAVE:
@@ -388,12 +388,18 @@ static void th_bed(void *u)
 }
 
 /* ------------------------------------------------------------------ voices */
+#ifndef AALPHA
+#define AALPHA 0.96f
+#endif
+#ifndef ATILT
+#define ATILT 0.62f
+#endif
 static const VStyle vstyle[5] = {
-    /* alpha tilt breath vibr vibd sub dual dualint gain */
-    { 1.00f, 0.80f, 0.14f, 5.3f, 0.16f, 0.00f, 0.0f, 0, 0.55f },  /* A android: clear, airy */
-    { 0.86f, 1.00f, 0.05f, 4.7f, 0.28f, 0.30f, 0.0f, 0, 0.60f },  /* B cyborg: lower tract, sub-harmonic depth */
-    { 0.93f, 0.90f, 0.09f, 5.0f, 0.20f, 0.00f, 0.6f, -12, 0.58f }, /* C merged: one tract, two glottal sources */
-    { 0.97f, 0.70f, 0.35f, 4.2f, 0.10f, 0.00f, 0.0f, 0, 0.14f },  /* ghost */
+    /* alpha tilt breath vibr vibd sub dual dualint gain legato */
+    { AALPHA, ATILT, 0.14f, 5.3f, 0.16f, 0.00f, 0.0f, 0, 0.60f, 0.82f },  /* A android: clear, airy, not shrill */
+    { 0.86f, 1.00f, 0.05f, 4.7f, 0.28f, 0.30f, 0.0f, 0, 0.60f, 0.95f },  /* B cyborg: lower tract, sub-harmonic depth */
+    { 0.93f, 0.85f, 0.09f, 5.0f, 0.20f, 0.00f, 0.6f, -12, 0.58f, 0.85f }, /* C merged: one tract, two glottal sources */
+    { 0.97f, 0.70f, 0.35f, 4.2f, 0.10f, 0.00f, 0.0f, 0, 0.14f, 0.90f },  /* ghost */
 };
 static void sing(int track, const short *w, int nw, const unsigned char *nts, int nn, int bar, const VStyle *st, unsigned short *mouth)
 {

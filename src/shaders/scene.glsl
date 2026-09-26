@@ -75,15 +75,18 @@ float machines(vec3 p){
  d=min(d,cap(r,vec3(1.25,2.3,-2.3),vec3(1.7,3.9,-2.3),.035));
  return d;
 }
-float cables(vec3 p){
+// cables from the pillars along the floor; they dive into the floor through sockets before the cradle
+float cables(vec3 p,out float m){
  vec3 r=p;r.x=abs(r.x);
- float d=1e3;
+ float d=1e3,k=1e3;
  for(int i=0;i<3;i++){float fi=float(i);
-  vec3 a=vec3(1.45,.025,-1.75+fi*.09),b=vec3(.35,.12,-1.3-fi*.08);
+  vec3 a=vec3(1.45,.025,-1.75+fi*.09),b=vec3(.62,-.03,-1.45-fi*.07);
   float h=clamp((r.x-b.x)/(a.x-b.x),0.,1.);
-  vec3 c=mix(b,a,h);c.y=mix(b.y,a.y,sqrt(h))+.012*fi;c.z+=.1*sin(h*3.1)*(fi-1.);
-  d=min(d,length(r-c)-.018);}
- return d;
+  vec3 c=mix(b,a,h);c.y=mix(b.y,a.y+.012*fi,sqrt(h));c.z+=.1*sin(h*3.1)*(fi-1.);
+  d=min(d,length(r-c)-.018);
+  k=min(k,tor(r-vec3(.64,.004,b.z),.03,.008));}
+ m=k<d?3.:6.;
+ return min(d,k);
 }
 // air of the white room (rounded "infinity cove") + corridor; the solid is its complement
 float airRoom(vec3 p){return box(p-vec3(0,2.,.5),vec3(5.,2.,6.),.7);}
@@ -124,6 +127,17 @@ float medical(vec3 p,out float m){
  if(fr<d){d=fr;m=3.;}
  return d;
 }
+// cables along the strange passage, all heading for the doors of her room
+float pcables(vec3 p){
+ float s=U[15].y,zz=p.z-26.,g=max(zz-4.,0.),ht=3.+s*g*.14,d=1e5;
+ vec3 r=p;
+ r.xy=rot(s*.012*g*sin(zz*.07)*(1.-smoothstep(24.,30.,zz)))*(r.xy-vec2(0,1.5))+vec2(0,1.5);
+ for(int i=0;i<4;i++){float fi=float(i);                                      // at the foot of the walls
+  d=min(d,length(vec2(abs(p.x)-1.14-fi*.045-.02*sin(zz*.9+fi*2.),p.y-.024-.012*mod(fi,2.)))-.02-.004*fi);}
+ for(int i=0;i<3;i++){float fi=float(i),f=fract((zz-1.2)/2.4);                 // sagging from rib to rib under the ceiling
+  d=min(d,length(vec2(r.x-(fi-1.)*.45,r.y-ht+.22+.28*sin(3.1416*f)*(.6+.2*fi)))*.9-.016);}
+ return max(d,max(-zz,zz-32.));
+}
 float doors(vec3 p){
  float s=U[15].y,wd=1.5+s*.98,ht=3.+s*3.92,a=U[12].w*1.35;
  vec3 r=p-vec3(0,0,58.);
@@ -148,9 +162,10 @@ float map(vec3 p){
  x=racks(p);if(x<d){d=x;m=9.;}
  if(p.z>50.){x=doors(p);if(x<d){d=x;m=8.;}}
  if(p.z>5.&&p.z<26.2){float mm;x=medical(p,mm);if(x<d){d=x;m=mm;}}
+ if(p.z>26.){x=pcables(p);if(x<d){d=x;m=6.;}}
  x=pod(p);if(x<d){d=x;m=8.;}
  x=machines(p);if(x<d){d=x;m=8.;}
- x=cables(p);if(x<d){d=x;m=6.;}
+ {float cm;x=cables(p,cm);if(x<d){d=x;m=cm;}}
  x=android(p);if(x<d){d=x;m=gM;}
  gM=m;
  return d;
@@ -172,7 +187,7 @@ vec3 emis(vec3 p,vec3 n,float m){
  if(p.z>58.2)e+=vec3(9.,9.2,9.5)*(.2+U[12].w*2.)+vec3(5.,2.,7.)*U[11].z;
  if(p.z>57.8)e+=vec3(5.,2.,7.)*U[11].z*(exp(-abs(p.x)*60.)*4.+.12);            // her distant voice leaks through the doors
  if(p.z>5.5&&p.z<25.6){                                                    // the medical corridor
-  e+=vec3(.36,.37,.38)*step(n.y,-.5)*LIGHTS;                                   // light bounced from the floor onto the white ceiling
+  e+=vec3(.36,.37,.38)*step(n.y,-.5)*step(2.8,p.y)*LIGHTS;                    // light bounced from the floor onto the white ceiling
   vec2 g=vec2(abs(p.x),abs(mod(p.z-6.,2.4)-1.2));
   e+=vec3(3.,3.05,3.1)*(1.-smoothstep(0.,.02,max(g.x-.5,g.y-.62)))*step(2.86,p.y)*LIGHTS;
   e+=vec3(.2,1.,.45)*(1.-smoothstep(.012,.02,abs(p.x+.62)))*step(p.y,.002)*step(6.,p.z)*.9*LIGHTS;
@@ -181,6 +196,7 @@ vec3 emis(vec3 p,vec3 n,float m){
  }
  if(abs(p.z-25.86)<.1&&abs(p.x)<.7&&p.y<2.25)                                 // her voice leaks through the seams of the access
   e+=vec3(5.,2.,7.)*U[11].z*(exp(-(abs(p.x)-U[15].z*.64)*120.)*2.+.05)*(1.-U[15].z);
+ if(m==6.&&p.z>26.)e+=vec3(.7,.35,1.)*pow(max(sin(p.z*1.2-U[0].x*5.),0.),24.)*1.3;   // pulses running to her room
  if(p.z>26.&&p.z<57.){float rz=abs(mod(p.z-6.,2.4)-1.2);
   e+=(vec3(2.,2.1,2.2)*LIGHTS+vec3(2.4,.8,3.6)*U[11].z*smoothstep(25.,57.,p.z))*(1.-smoothstep(.03,.05,rz))*step(.2,p.y);}
  if(p.x<-4.){vec2 g=fract(vec2(p.z*8.,p.y*12.));float on=step(.6,h2(floor(vec2(p.z*8.,p.y*12.))+floor(U[0].x*3.)*.37));
@@ -345,6 +361,7 @@ vec3 emis(vec3 p,vec3 n,float m){
  return e;
 }
 #endif
+float gSp=1e4;      // what the particles see behind an empty pixel (in space: the nearest world)
 #ifdef S_SPACE
 // ---------------------------------------------------------------- cyberspace: faces as masks, bodies of light, worlds
 // U[16] planet centre+radius, U[17] type, ring inner, ring outer, ring tilt, U[18] sun dir + star size,
@@ -364,19 +381,37 @@ float map(vec3 p){
 }
 vec3 env(vec3 d){return vec3(.08,.07,.14)+vec3(1.,.95,.9)*.8*smoothstep(.9,1.,dot(d,normalize(U[18].xyz)));}
 vec3 emis(vec3 p,vec3 n,float m){return vec3(0);}
+const vec3 GN=vec3(.3,.9,.32),GC=vec3(-.35,-.02,-.94);  // the galaxy's pole, and the direction of its core
 vec3 stars(vec3 d){
- vec3 c=vec3(0);
- for(int i=0;i<3;i++){float sc=180.+float(i)*170.;vec3 q=d*sc,id=floor(q),f=fract(q)-.5;
+ vec3 c=vec3(0);float bd=exp(-pow(dot(d,GN)/.25,2.));
+ for(int i=0;i<4;i++){float sc=150.+float(i)*160.;vec3 q=d*sc,id=floor(q),f=fract(q)-.5;
   vec3 r=h3(dot(id,vec3(1,57,113))+float(i)*7.);
-  float s=smoothstep(.12,0.,length(f-(r-.5)*.7))*step(.82,r.x);
-  c+=mix(vec3(.6,.7,1.),vec3(1.,.8,.7),r.y)*s*(.5+2.*r.z*r.z);}
+  float s=smoothstep(.12,0.,length(f-(r-.5)*.7))*step(.84-.25*bd*float(i)/3.,r.x);   // denser along the galaxy
+  c+=mix(vec3(.55,.68,1.),vec3(1.,.78,.6),r.y)*s*(.5+2.*r.z*r.z)*(.75+.25*sin(U[0].x*(1.+r.z*4.)+r.y*40.));}
  return c;
 }
 vec3 nebula(vec3 d){
- float n=fbm(d*2.5+vec3(0,0,U[0].x*.01)),m=fbm(d*5.+n*2.);
- vec3 c=mix(vec3(.35,.05,.1),vec3(.05,.12,.45),smoothstep(.3,.7,m))*pow(n,2.5)*1.6;
- c+=vec3(.3,.2,.5)*pow(max(0.,1.-abs(d.y*3.+.5*sin(d.x*4.))),6.)*.25;   // an interstellar current
+ float t=U[0].x*.004,g=dot(d,GN),n=fbm(d*2.5+t),m=fbm(d*5.+n*2.);
+ // the galaxy seen from inside: a band of star clouds, its bright core, dark lanes of dust along the middle
+ float bd=exp(-pow(g/(.1+.1*n),2.)),co=exp(-pow(length(d-GC)/.45,2.)),st=fbm(d*16.+m);
+ float du=smoothstep(.42,.7,fbm(d*7.+vec3(n)))*exp(-pow((g+.02*sin(d.x*9.))/.06,2.));
+ vec3 c=(mix(vec3(.4,.52,.95),vec3(1.,.75,.48),co)*(bd*(.12+.9*st*st*st)+co*.9*exp(-pow(g/.1,2.))))*(1.-.9*du);
+ // emission nebulae, in a few regions of the sky only: folded veils of three colours, bright ridges, dark dust
+ float rgn=smoothstep(.5,.7,fbm(d*1.4+vec3(5,1,2))),w=fbm(d*3.+m*1.6+vec3(t,0,-t)),rg=1.-abs(2.*fbm(d*7.+w*2.5)-1.);
+ vec3 ec=mix(mix(vec3(.95,.12,.42),vec3(.08,.5,.9),smoothstep(.4,.62,m)),vec3(1.,.5,.15),smoothstep(.62,.78,w));
+ c+=ec*rgn*(smoothstep(.35,.85,w)*.5+pow(rg,10.)*smoothstep(.3,.6,w)*1.2);
+ c*=1.-.8*rgn*smoothstep(.5,.7,fbm(d*9.+n*3.));
+ c+=vec3(1.,.3,.55)*pow(max(st-.62,0.)*5.,3.)*bd*.3;                         // pink knots where stars are born
  return c*U[19].y;
+}
+// a few bright stars, with the diffraction spikes of an eye that has become a telescope
+vec3 flares(vec3 rd,vec3 rt,vec3 up){
+ vec3 c=vec3(0);
+ for(int i=0;i<14;i++){vec3 r=h3(float(i)*7.31+2.),s=normalize(r-.5);
+  if(dot(rd,s)>.99){vec2 w=vec2(dot(rd-s,rt),dot(rd-s,up))*(900.-r.x*400.);
+   float k=exp(-dot(w,w)*.08)*6.+exp(-length(w)*.5)*.5+(exp(-abs(w.x)*2.)*exp(-abs(w.y)*.06)+exp(-abs(w.y)*2.)*exp(-abs(w.x)*.06))*.7;
+   c+=mix(vec3(.7,.8,1.),vec3(1.,.75,.5),r.y)*k*(.4+r.z);}}
+ return c*(1.-U[19].x*.4);
 }
 vec3 surf(vec3 n,float ty,vec3 sun,vec3 rd){
  float tt=U[0].x*.01;
@@ -402,8 +437,9 @@ vec3 surf(vec3 n,float ty,vec3 sun,vec3 rd){
   c*=.8+.3*g;
  }
  c=mix(c,vec3(1),cl);
- vec3 col=c*(dif*1.2+.02)*term;
- col+=spec*(1.-cl)*pow(max(dot(reflect(rd,n),sun),0.),60.)*term*vec3(1.,.9,.7);
+ vec3 col=c*(dif*1.2+.02)*term*mix(vec3(1.,.55,.35),vec3(1),smoothstep(0.,.3,dot(n,sun)));    // the light reddens at dusk
+ col+=spec*(1.-cl)*(pow(max(dot(reflect(rd,n),sun),0.),60.)*vec3(1.,.9,.7)+pow(max(dot(reflect(rd,n),sun),0.),7.)*vec3(.2,.3,.4))*term;
+ col+=(ty<.5?vec3(.2,.8,1.):ty>2.5?vec3(1.,.4,.2):vec3(.4,.3,1.))*pow(g,5.)*(1.-cl)*(1.-smoothstep(-.2,0.,dot(n,sun)))*.35;   // the night side dreams: glowing veins
  return col;
 }
 vec3 world(vec3 ro,vec3 rd,vec4 pl,float ty,float ri,float rO,float tilt,inout float tMin){
@@ -412,11 +448,13 @@ vec3 world(vec3 ro,vec3 rd,vec4 pl,float ty,float ri,float rO,float tilt,inout f
  vec3 atm=ty<.5?vec3(.35,.6,1.):ty<1.5?vec3(1.,.6,.35):ty<2.5?vec3(.3,.55,1.):vec3(.9,.75,.6);
  if(h>0.){tp=-b-sqrt(h);
   if(tp>0.){vec3 n=normalize(oc+rd*tp);col=surf(n,ty,sun,rd);
-   float fr=pow(1.-max(dot(n,-rd),0.),3.);col+=atm*fr*max(dot(n,sun)+.3,0.)*.9;tMin=min(tMin,tp);}
+   float fr=pow(1.-max(dot(n,-rd),0.),3.),sd=dot(n,sun);
+   col+=(atm*max(sd+.25,0.)+vec3(1.,.4,.15)*exp(-pow(sd/.12,2.))*.8)*fr*1.1;tMin=min(tMin,tp);gSp=min(gSp,tp);}
  }
- // atmosphere halo around the limb
+ // atmosphere around the limb: blue by day, a thin sunset line at the terminator, a ring of fire when backlit
  float dm=length(oc-rd*b)-pl.w;
- if(b<0.)col+=atm*exp(-max(dm,0.)/(pl.w*.04))*.5*max(dot(normalize(oc-rd*b),sun)+.4,0.)*step(tp,1e19)*0.+atm*exp(-max(dm,0.)/(pl.w*.03))*.35*step(0.,dm);
+ if(b<0.&&dm>0.){vec3 ln=normalize(oc-rd*b);float sd=dot(ln,sun),fs=pow(max(dot(rd,sun),0.),6.);
+  col+=(atm*(max(sd+.35,0.)*.7+fs*3.)+vec3(1.,.45,.2)*exp(-pow(sd/.15,2.))*.9)*exp(-dm/(pl.w*.025))*.6;}
  // rings
  if(rO>0.){
   vec3 rn=normalize(vec3(sin(tilt),cos(tilt),.25));
@@ -424,11 +462,11 @@ vec3 world(vec3 ro,vec3 rd,vec4 pl,float ty,float ri,float rO,float tilt,inout f
   if(tr>0.){vec3 rp=ro+rd*tr-pl.xyz;float r=length(rp);
    if(r>ri&&r<rO){
     float u=(r-ri)/(rO-ri);
-    float den=(.55+.45*sin(u*90.))*(.6+.4*sin(u*23.+1.))*smoothstep(0.,.03,u)*(1.-smoothstep(.97,1.,u))*(.7+.3*vn2(vec2(u*400.,1.)));
+    float den=(.3+.7*vn2(vec2(u*40.,.5)))*(.5+.5*vn2(vec2(u*230.,7.5)))*smoothstep(0.,.04,u)*(1.-smoothstep(.95,1.,u))*(.8+.2*vn2(vec2(u*900.,1.)));
     den*=1.-.85*smoothstep(.44,.46,u)*(1.-smoothstep(.49,.51,u));      // a division
     // shadow of the planet on the ring
     vec3 w=rp;float bb=dot(w,sun),sh=step(0.,bb)+step(pl.w*pl.w,dot(w,w)-bb*bb)>0.?1.:0.;
-    vec3 rc=vec3(.95,.88,.78)*den*(.15+.9*sh)*(.4+.6*abs(dot(rn,sun)));
+    vec3 rc=mix(vec3(.95,.86,.72),vec3(.72,.76,.85),vn2(vec2(u*13.,3.5)))*den*(.15+.9*sh)*(.7+.9*abs(dot(rn,sun))+2.*pow(max(dot(rd,sun),0.),8.));   // backlit ice glows
     float a=den*.85;
     if(tr<tp)col=mix(col,rc,a);else col+=rc*a*(tp>1e19?1.:0.);
     tMin=min(tMin,tr);
@@ -437,8 +475,8 @@ vec3 world(vec3 ro,vec3 rd,vec4 pl,float ty,float ri,float rO,float tilt,inout f
  }
  return col;
 }
-vec3 space(vec3 ro,vec3 rd){
- vec3 col=stars(rd)*(1.-U[19].x*.5)+nebula(rd);
+vec3 space(vec3 ro,vec3 rd,vec3 rt,vec3 up){
+ vec3 col=stars(rd)*(1.-U[19].x*.5)+nebula(rd)+flares(rd,rt,up);
  vec3 sun=normalize(U[18].xyz);
  // the great star (oneiric): granulated disc and corona
  if(U[18].w>0.){float cs=dot(rd,sun),rs=U[18].w;float a=acos(clamp(cs,-1.,1.));
@@ -618,7 +656,7 @@ void main(){
  for(int i=0;i<220;i++){d=map(cp+rd*t);if(abs(d)<t*.0003+.00002||t>80.)break;t+=d*.9;}
  vec3 col=TESTMODE?vec3(.1,.105,.11)*(1.-.4*length(q-.5)):vec3(0);
 #ifdef S_SPACE
- col=space(cp,rd);
+ col=space(cp,rd,rt,up);
 #endif
  if(t<80.){
   vec3 p=cp+rd*t;float m=gM;
@@ -634,7 +672,7 @@ void main(){
    float rel=length(p-U[13].xyz)/6.+h2(floor(gl_FragCoord.xy/2.))*.15;
    float er=smoothstep(0.,.4,U[14].x-rel*2.);col*=1.-er;if(er>.5)od=1e4;}
 #endif
- }else od=1e4;
+ }else od=gSp;
 #ifdef S_CATH
  col*=1.-smoothstep(5.,6.4,U[14].x);
 #endif

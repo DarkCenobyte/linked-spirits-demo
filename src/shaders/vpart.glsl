@@ -1,13 +1,15 @@
 // ---- particles: everything is generated from gl_VertexID ------------------------
-// U[63]: x mode, y seed/phase, z intensity, w count.  U[16..19]: mode parameters.
+// U[63]: x mode, y first particle, z intensity, w end.  U[16..19]: mode parameters.
 out vec4 pc;          // colour (premultiplied intensity)
 out float pdist;      // distance from the camera (for depth occlusion)
 out float psz;        // sprite size in pixels
 out float pline;      // 1 for streak lines
 layout(binding=4) uniform sampler2D SC;   // the frozen frame: colour
 layout(binding=5) uniform sampler2D SD;   // and distance along each ray
-float ph(float n){return fract(sin(n*12.9898)*43758.5453);}
-vec3 ph3(float n){return fract(sin(vec3(n,n+17.1,n+31.7)*12.9898)*43758.5453);}
+uint hu(uint x){x^=x>>16;x*=0x7feb352dU;x^=x>>15;x*=0x846ca68bU;return x^x>>16;}     // integer hash: sin() hashes break down past ~1e5
+float ph(float n){return float(hu(floatBitsToUint(n)))*2.3283e-10;}
+vec3 ph3(float n){uint h=hu(floatBitsToUint(n));return vec3(h,hu(h),hu(h^0x9e3779b9U))*2.3283e-10;}
+float n1(float x){float f=fract(x);return mix(ph(floor(x)),ph(floor(x)+1.),f*f*(3.-2.*f));}
 vec3 sdir(float n){vec3 r=ph3(n);float z=r.x*2.-1.,a=r.y*6.2831;return vec3(sqrt(1.-z*z)*vec2(cos(a),sin(a)),z);}
 // gentle curl-like drift
 vec3 drift(vec3 p,float t){return vec3(sin(p.y*1.3+t*.3+p.z),sin(p.z*1.1+t*.27+p.x*.7),sin(p.x*1.2+t*.23+p.y*.5));}
@@ -54,7 +56,7 @@ vec4 bodyPt(int B,float n){
 void main(){
  float i=float(gl_VertexID),t=U[0].x,mode=U[63].x;
  vec3 p=vec3(0),col=vec3(1);float sz=.004,inten=U[63].z,en=0.;
- vec3 r=ph3(i*.137+U[63].y);
+ vec3 r=ph3(i*.137);
  if(mode<1.5){                                   // 1: motes of light floating in the room
   vec3 c=U[16].xyz;vec3 ext=vec3(U[16].w,U[16].w*.45,U[16].w);
   p=c+(r-.5)*2.*ext;if(U[17].y>.5)p=c+sdir(i*.77)*U[16].w*pow(r.x,.6);p+=drift(p,t)*.15;
@@ -66,9 +68,8 @@ void main(){
  }else if(mode<2.5){                             // 2: the first green lights in the dark
   float k=mod(i,4.);p=vec3((mod(k,2.)*2.-1.)*(k<2.?1.7:2.5),k<2.?1.45:2.1,k<2.?-1.55:-2.2);
   col=vec3(.2,1.,.45)*step(k+.5,U[12].y)*4.;sz=.02;
- }else if(mode<3.5){                             // 3: cyberspace
-  float N=U[63].w,f=i/N;
-  if(f<.6){                                      // bodies of light: blue android, red cyborg, and sometimes a third
+ }else if(mode<4.5){                             // 3: cyberspace (4: inside a ring)
+  if(i<60000.){                                      // bodies of light: blue android, red cyborg, and sometimes a third
    float who=step(.45,ph(i*.91));
    vec4 b=bodyPt(who>.5?40:20,i);
    p=b.xyz+drift(b.xyz*6.,t*1.5)*.01;
@@ -78,23 +79,44 @@ void main(){
    if(th>0.){vec4 b2=bodyPt(who>.5?20:40,i);vec3 m=(b.xyz+b2.xyz)*.5;p=mix(p,m+drift(m*9.,t*3.)*.02,th);
     col=mix(col,vec3(1.,.95,1.)*(.8+.4*sin(t*20.+i)),th*.8)+vec3(1,0,0)*th*step(.8,ph(i*1.1))*sin(t*30.+i)+vec3(0,0,1)*th*step(.8,ph(i*1.3))*sin(t*27.+i);}
    col*=(b.w>2.5?.9+.2*r.z:.5+.9*r.z)*(who>.5?U[59].w:1.);sz=b.w>2.5?.0036:.0032;
-  }else if(f<.92){                               // the field: dust of stars travelling past
+  }else if(i<120000.){                               // the field: dust of stars travelling past
    vec3 c=U[1].xyz;float E=40.;
    p=(r-.5)*2.*E;p.z-=t*U[19].x*25.;p=c+mod(p-c+E,2.*E)-E;
    col=mix(vec3(.6,.7,1.),vec3(1.,.7,.6),ph(i*.3))*(.3+ph(i*.7));sz=.03;
-  }else{                                         // fugitive structures of light: rings, bridges, helices
-   inten*=U[19].x>.01?1.:0.;
-   float s=ph(i*.17),k=floor(t/9.6),tk=fract(t/9.6),shp=mod(k,3.);
-   vec3 o=vec3(0,-6.+ph(k)*4.,-40.+tk*30.);
-   if(shp<.5)p=o+vec3(cos(s*6.283)*25.,0,sin(s*6.283)*25.);
-   else if(shp<1.5)p=o+vec3((s-.5)*80.,-2.+cos(s*3.14)*4.,sin(s*40.)*.3);
-   else p=o+vec3(cos(s*60.)*6.,(s-.5)*60.,sin(s*60.)*6.);
-   col=mix(vec3(.3,.5,1.),vec3(1.,.3,.4),ph(k*1.3))*sin(tk*3.14)*1.5;sz=.06;
+   if(mode>3.5){                                  // 4: inside a planetary ring: an ocean of fragments
+    E=6.;vec3 e=vec3(E,E*.25,E);p=(r-.5)*2.*e;p.x-=t*1.2;p=c+mod(p-c+e,2.*e)-e;
+    float br=pow(ph(i*.9),3.);col=mix(vec3(.5,.45,.4),vec3(1.,.93,.85),br)*(.05+1.2*br);sz=.004+.03*pow(ph(i*.4),6.);}
+  }else if(i<136000.){                           // their wakes: two braided trails of light, blue and red
+   float j=i-120000.,w=step(8000.,j),s=pow(ph(j*.37),1.5),L=4.+50.*U[19].x,a=s*L*.9-t*4.+w*3.1416;
+   vec3 o=w>.5?U[40].xyz:U[20].xyz;o.y+=.25;
+   p=mix(o,vec3(0,1.2,0),smoothstep(0.,.3,s))+vec3(cos(a),sin(a),0)*(.05+2.2*s)+vec3(0,0,s*L)+(ph3(j*.9)-.5)*.1*(1.+6.*s);
+   col=(w>.5?vec3(1.,.25,.15):vec3(.2,.5,1.))*(1.-s)*(.6+.8*ph(j*.2))*U[67].x;sz=.012;
+  }else if(i<150000.){                           // motes of the dream: tiny lights drifting around them
+   float j=i-136000.;vec3 h=ph3(j*.61);
+   p=(h-.5)*vec3(16,7,16)+vec3(0,1.3,0);p+=drift(p*.4,t*.6)*.8;
+   col=mix(mix(vec3(.3,.6,1.),vec3(1.,.35,.5),step(.5,h.x)),vec3(.5,1.,.8),step(.8,h.z))*(.4+.6*pow(.5+.5*sin(t*(1.+h.y*3.)+j),4.))*U[67].y;
+   sz=.004+.006*h.y;
+  }else{                                         // the great disc: a spiral galaxy, a disc where worlds are born, a ring
+   float j=i-150000.,kd=U[69].z,R=U[68].w,ri=0.,tl=U[69].x;vec3 h=ph3(j*.113),C=U[68].xyz,nn;
+   float rr=pow(h.x,.6),th=h.y*6.2832,den=1.;
+   if(kd>1.5){C=U[16].xyz;R=U[17].z;ri=U[17].y/R;rr=mix(ri,1.,h.x);
+    float u=(rr-ri)/(1.-ri);den=(.3+.7*n1(u*40.))*(.5+.5*n1(u*230.))*(1.-.85*smoothstep(.44,.46,u)*(1.-smoothstep(.49,.51,u)));}
+   nn=normalize(vec3(sin(tl),cos(tl),U[67].z));
+   float arm=step(h.z,.55);                                                         // a galaxy: two arms, and the old disc between them
+   if(kd<.5){rr=arm>.5?pow(h.x,.7):-log(1.-h.x*.95)*.33;th=arm>.5?floor(h.y*2.)*3.1416+log(rr*12.+1.)*2.6+(ph(j*.3)+ph(j*.8)-1.)*(.3+.35*rr):th;}
+   if(kd>.5&&kd<1.5){rr=mix(.03,1.,h.x*h.x);den=1.-.9*exp(-pow(sin(rr*31.)*3.,2.))*step(.15,rr);}                // gaps opened by young worlds
+   th-=t*U[69].y/(.2+rr);                          // inner orbits turn faster
+   float r0=rr*R;vec3 lp=vec3(cos(th)*r0,(ph(j*.71)-.5)*R*.012*(1.2-rr),sin(th)*r0);
+   if(kd<.5&&ph(j*.4)<.07){lp=sdir(j*1.3)*R*.1*pow(ph(j*.5),1.5);lp.y*=.6;rr=0.;}   // the bulge
+   if(kd>.5&&kd<1.5&&h.x<.03){lp=sdir(j)*R*.004;rr=.01;den=8.;}                  // the young star at the centre
+   vec3 e1=normalize(cross(nn,vec3(0,0,1))+vec3(1e-4,0,0)),e2=cross(e1,nn);
+   p=C+e1*lp.x+nn*lp.y+e2*lp.z;
+   col=kd<.5?(arm>.5?mix(vec3(1.,.85,.6),vec3(.4,.6,1.),smoothstep(.02,.3,rr))*.9:vec3(1.,.82,.6)*.45):kd<1.5?mix(vec3(.85,.9,1.),mix(vec3(1.,.6,.3),vec3(.9,.25,.3),rr),smoothstep(.05,.5,rr))*(.25+.2/(rr+.05)):vec3(1.,.93,.82)*den;
+   if(ph(j*.9)>.97)col=kd<.5?vec3(1.,.3,.6)*2.:vec3(.6,.8,1.)*2.5;                  // pink knots, blue sparks
+   if(kd>1.5){vec3 w=p-C,s=normalize(U[18].xyz);float bb=dot(w,s);col*=bb<0.&&dot(w,w)-bb*bb<U[16].w*U[16].w?.08:1.;}  // the planet's shadow
+   col*=den*(.3+ph(j*1.7)*.9)*U[69].w*(1.-smoothstep(.85,1.,rr));
+   sz=kd<.5?R*.002:kd<1.5?R*.00025:.5;
   }
- }else if(mode<4.5){                             // 4: inside a planetary ring: an ocean of fragments
-  vec3 c=U[1].xyz;float E=6.;
-  p=(r-.5)*2.*vec3(E,E*.25,E);p.x-=t*1.2;p=c+mod(p-c+vec3(E,E*.25,E),2.*vec3(E,E*.25,E))-vec3(E,E*.25,E);
-  float br=pow(ph(i*.9),3.);col=mix(vec3(.5,.45,.4),vec3(1.,.93,.85),br)*(.05+1.2*br);sz=.004+.03*pow(ph(i*.4),6.);
  }else if(mode<5.5){                             // 5: the contact, then the world dissolves into points of light
   if(i<1.5){                                     // a blue point under her finger, then a red one
    p=U[13].xyz+vec3(i*.012-.006,.004-i*.008,-.012);
@@ -124,8 +146,9 @@ void main(){
  pline=0.;
  if(i>=1e7){                                    // streak pass: line segments stretched by the speed
   float j=floor((i-1e7)*.5),tail=mod(i,2.);vec3 c=U[1].xyz;float E=60.;vec3 rr=ph3(j*.173);
-  p=(rr-.5)*2.*E;p.z-=t*U[19].x*60.;p=c+mod(p-c+E,2.*E)-E;p.z+=tail*U[19].x*6.;
-  col=mix(vec3(.5,.6,1.),vec3(1.,.6,.7),rr.x)*.8;sz=.02;pline=1.;inten=1.;
+  p=(rr-.5)*2.*E;p.z-=t*U[19].x*60.;p=c+mod(p-c+E,2.*E)-E;p.z+=tail*U[19].x*(8.+10.*rr.z);
+  col=tail>.5?mix(vec3(.5,.15,.9),vec3(1.,.3,.35),rr.x)*.06:mix(vec3(.75,.85,1.),vec3(1.,.85,.9),rr.x)*(.6+.8*rr.y);
+  sz=.02;pline=1.;inten=1.;
  }
  vec3 cp=U[1].xyz,fw=normalize(U[2].xyz-cp),rt=normalize(cross(fw,vec3(0,1,0))),up=cross(rt,fw);
  rt=rt*cos(U[2].w)+up*sin(U[2].w);up=cross(rt,fw);

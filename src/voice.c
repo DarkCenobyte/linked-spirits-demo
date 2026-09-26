@@ -34,6 +34,9 @@
 #ifndef VGL
 #define VGL 1        /* 1: natural pitch (glides, scoops, irregular vibrato, drift, jitter), 0: the first version */
 #endif
+#ifndef VLEG
+#define VLEG 1       /* long notes breathe (style legato) */
+#endif
 #ifndef VSUS
 #define VSUS 0.35f   /* held vowels: how much spoken stress remains */
 #endif
@@ -59,6 +62,7 @@ typedef struct {
     float dual;    /* second glottal source at +interval (merged voice) */
     float dualint; /* interval of the second source (semitones) */
     float gain;
+    float leg;     /* long notes keep this fraction of their length (breathing room) */
 } VStyle;
 
 static unsigned vrs = 12345u;
@@ -169,7 +173,7 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                const VNote *nt, int nn, const VStyle *st, unsigned short *mouth)
 {
     static VSeg sg[VMAXS * 4];
-    int lp[VMAXP], nlp = 0, sb[VMAXS], sv[VMAXS], se[VMAXS], ns = 0, nsg = 0;
+    int lp[VMAXP], nlp = 0, sb[VMAXS], sv[VMAXS], se[VMAXS], sw[VMAXS], ns = 0, nsg = 0;
     int w, i, j, s;
     float isr = VSR * st->alpha;
     /* gather phonemes, syllabify per word */
@@ -184,7 +188,7 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
                     sb[ns] = prevv + (nc <= 1 ? 1 : 2);
                     se[ns - 1] = sb[ns];
                 }
-                sv[ns++] = nlp; prevv = nlp;
+                sw[ns] = w; sv[ns++] = nlp; prevv = nlp;
             }
             nlp++;
         }
@@ -203,6 +207,8 @@ int voice_line(float *out, int outlen, int t0samp, const short *words, int nw,
             nextOn = nstart - non;
             if (nextOn < end) end = nextOn;
         }
+        if (VLEG && end - start > 0.6f && (s + 1 == ns || sw[s + 1] != sw[s]))   /* long notes breathe, between words only */
+            end -= (end - start - 0.6f) * (1 - st->leg) * 2;
         vdur = end - co - start;
         if (vdur < 0.07f) { sc = (end - start - 0.07f) / (co + 1e-6f); if (sc < 0.35f) sc = 0.35f; vdur = end - co * sc - start; }
         t = start - on;

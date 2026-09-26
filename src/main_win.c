@@ -77,6 +77,15 @@ static void make_text(void)
     TextOutA(dc, TEXT_W / 2, 10, "LINKED//SPIRITS", 15);
     SelectObject(dc, CreateFontA(40, 0, 0, 0, 300, 0, 0, 0, 0, 0, 0, ANTIALIASED_QUALITY, 0, "Segoe UI Light"));
     TextOutA(dc, TEXT_W / 2, 190, "By: Claude Opus 5.5  //  Prompts by: DarkCenobyte", 49);
+    {   /* the lyrics, one row each */
+        const char *s = vl_text; int l = 0, n;
+        SelectObject(dc, CreateFontA(46, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, ANTIALIASED_QUALITY, 0, "Segoe UI"));
+        while (*s) {
+            for (n = 0; s[n] != '\n'; n++) {}
+            TextOutA(dc, TEXT_W / 2, 256 + l * 64 + 6, s, n);
+            s += n + 1; l++;
+        }
+    }
     GdiFlush();
     for (i = 0; i < TEXT_W * TEXT_H; i++) px[i] = (unsigned char)bits[i];
     glCreateTextures(GL_TEXTURE_2D, 1, &tex_text);

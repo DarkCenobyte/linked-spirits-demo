@@ -29,16 +29,19 @@ float face(vec3 p0,vec2 bl2,float mo,float mr,float sty){
  // jaw: two planes converging to the chin (V line), a defined underside, a small chin
  d=smax(d,dot(q-vec3(.05+.006*sty,-.056,.03),normalize(vec3(1,-.65+.2*sty,.28))),.018-.006*sty);
  d=smax(d,dot(p-vec3(0,-.093,.05),normalize(vec3(0,-1,.4))),.01);
- d=smin(d,ell(p-vec3(0,-.079-.003*sty,.055),vec3(.02+.007*sty,.013,.016)),.012);
+ d=smin(d,ell(p-vec3(0,-.079-.009*sty,.055-.004*sty),vec3(.02-.003*sty,.013+.005*sty,.016)),.012);   // her chin: longer, narrower
  // planes: forehead, cheeks, temples (sculpted rather than round)
  d=smax(d,dot(p-vec3(0,.04,.082),normalize(vec3(0,.28,1))),.03);
  d=smax(d,dot(q-vec3(.05,-.024,.057),normalize(vec3(1,-.08,.62)))-.002*sty,.024);
  d=smax(d,q.x-.066,.014);
  // a shallow hollow under each cheekbone (finer face, no crease)
  vec2 cv=(q.xy-vec2(.047,-.043))/vec2(.015,.022);
- d+=.0024*exp(-dot(cv,cv))*smoothstep(.02,.05,p.z);
+ d+=(.0024+.0032*sty)*exp(-dot(cv,cv))*smoothstep(.02,.05,p.z);   // gaunter for the cyborg
  // barely-there eye sockets
- d=smax(d,-ell(q-vec3(.033,.008,.086),vec3(.019,.009,.007)),.014);
+ d=smax(d,-ell(q-vec3(.033,.008,.086),vec3(.019,.009+.002*sty,.007+.004*sty)),.014);   // deeper for the cyborg
+ if(sty>0.){ // the cyborg: a stern brow ridge and a faint crest along the skull
+  d=mix(d,smin(d,ell(q-vec3(.03,.021,.071),vec3(.024,.005,.009)),.016),sty);
+  d=mix(d,smin(d,cap(p,vec3(0,.112,-.07),vec3(0,.075,.058),.005),.012),sty*.7);}
  // face plate seam: over the forehead, down in front of the ears, under the jaw
  float g=(p.z-.033-.4*p.y-2.*p.y*p.y)*.9;
  d=groove(d,g,.0007,.0012);

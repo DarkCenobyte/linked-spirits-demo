@@ -5,7 +5,7 @@
 #define RW 1920
 #define RH 816                    /* 2.35:1 cinema frame */
 #define NBLOOM 6
-#define NU 64                     /* vec4 uniforms shared by every program */
+#define NU 70                     /* vec4 uniforms shared by every program */
 
 enum { PR_LAB, PR_CATH, PR_SPACE, PR_PART, PR_DOWN, PR_UP, PR_FINAL, NPROG };
 
@@ -170,7 +170,7 @@ static void demo_frame(float t)
     glBindTextureUnit(2, tex_text);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     /* 2: particles */
-    np = (int)U[NU * 4 - 1];
+    np = (int)U[63 * 4 + 3];
     if (np > 0) {
         glBindFramebuffer(GL_FRAMEBUFFER, fb_part);
         glEnable(GL_BLEND);
@@ -180,7 +180,7 @@ static void demo_frame(float t)
         glBindTextureUnit(1, tex_dep);
         glBindTextureUnit(4, tex_snc);
         glBindTextureUnit(5, tex_snd);
-        glDrawArrays(GL_POINTS, 0, np);
+        glDrawArrays(GL_POINTS, (int)U[63 * 4 + 1], np - (int)U[63 * 4 + 1]);
         if (U[62 * 4 + 2] > 0) glDrawArrays(GL_LINES, 10000000, (int)U[62 * 4 + 2]);
         glDisable(GL_BLEND);
     }

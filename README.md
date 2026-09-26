@@ -34,21 +34,23 @@ the same.
 
 | file | bytes |
 |---|---|
-| `linked_spirits.exe` (raw, CRT-free) | 165 888 |
-| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **73 216** (71.5 KiB) |
+| `linked_spirits.exe` (raw, CRT-free) | 178 176 |
+| `linked_spirits_upx.exe` (`upx --best --ultra-brute --lzma`) | **79 360** (77.5 KiB) |
 
 This is above the 64 KiB ideal and well inside the 256 KiB limit. Artistic
 quality came first. Most of the bytes above 64 KiB went into the cyborg
 (her body, the machine and the cable dome of the cathedral), the dissolution
-of the world and the one-piece armour of light of the astral bodies.
+of the world, the astral world (galaxy, discs of light, skies) and the sung
+lyrics on screen. Going under 64 KiB would mean cutting the voice bank
+(≈ 20 KB packed) and with it the intelligibility of the singing.
 
 Where the packed bytes go (LZMA estimates):
 
 | part | raw | compressed |
 |---|---|---|
-| x86-64 code (director, synth, voice, platform) | 61.0 KB | ≈ 29.4 KB |
-| singing-voice bank (54 sung lines, 3 voices) | 49.3 KB | ≈ 20 KB |
-| GLSL (minified, 8 sources, 7 programs) | 42.5 KB | ≈ 15.3 KB |
+| x86-64 code (director, synth, voice, platform) | 63 KB | ≈ 31 KB |
+| singing-voice bank (54 sung lines, 3 voices) + lyrics text | 51 KB | ≈ 21 KB |
+| GLSL (minified, 8 sources, 7 programs) | 48.2 KB | ≈ 17 KB |
 | score, tables, GL names, constants | ≈ 6 KB | ≈ 4 KB |
 
 ## Storyboard
@@ -66,13 +68,13 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 | 2:53 | **The cathedral**: a nave of vertebral ribs and cables. At its end, a gigantic dome of woven cables with a face at its apex. Extreme close-up: the left eye opens **blue**, then the right one **red**, on an impact. |
 | 3:07 | **The sung dialogue**. The cyborg's worn face is set into the mass of cables. Below it hangs a body of worn plates over exposed muscle, arms ending in torn wires, hung from the vault and sunk into a machine. |
 | 3:50 | The android reaches up and takes the torn stump of her arm. A blue point of light appears under her finger, then a red one; a pulse runs up her arm, and **the contact wave**, a red/blue interference front, spreads through the cathedral. Then **the world dissolves**: every visible surface (the cables, the cyborg, the android) turns into points of light in its own colours, released by a front sweeping out from the touch, rising like embers into the dark. |
-| 4:10 | **Astral bodies**: a blue body of particles (android) with a green gorget and pauldrons; a taller red body (cyborg) with vivid blue ones. Her hand on the android's shoulder. |
-| 4:24 | **The journey**: acceleration, streaks of stars; an Earth-like world, a desert world, a gas giant whose rings they fly through (an ocean of fragments), an ocean world. |
+| 4:10 | **Astral bodies**: the screen stays black, then the astral world fades in: a blue body of particles (android) with a green gorget and pauldrons; a taller red body (cyborg) with vivid blue ones. Her hand on the android's shoulder. Below them, a spiral galaxy of a quarter of a million points of light, leaning towards the viewer; above, the band of another galaxy with its dust lanes, veils of nebulae and bright stars with diffraction spikes. |
+| 4:24 | **The journey**: they lean into the flight, arms swept back, legs trailing, leaving two braided wakes of blue and red light. Acceleration: streaks of stars, the edges of the frame pull everything out of it. An Earth-like world with a sunset line and a dreaming night side, a desert world, a gas giant whose ring is a disc of glittering dust in the planet's shadow (they fly through it: an ocean of fragments), an ocean world. Whoever sings reaches out towards the other. |
 | 4:34 | **Duo** (voices A and B together). |
 | 5:22 | *Am I becoming you?* Push into her iris: the iris becomes a planetary system. The pupil ignites into a star, the fibres settle into dust lanes, worlds appear on their orbits. |
-| 5:43 | The final quatrain, circling them with the worlds behind. |
-| 6:02 | **Climax**: the two bodies interpenetrate, and a third, ambiguous white silhouette appears between them. |
-| 6:12 | **The dream**: above an ocean planet, under a giant star. |
+| 5:43 | The final quatrain, hand in hand, above a disc where worlds are born: dust of light to the horizon, with gaps opened by young worlds and a young star at its centre that backlights everything (a planet eclipsing into a ring of fire). |
+| 6:02 | **Climax**: arms open, heads thrown back, the two bodies interpenetrate, and a third, ambiguous white silhouette appears between them. |
+| 6:12 | **The dream**: face to face, turning slowly, among drifting motes of light, above an ocean planet, under a giant star. |
 | 6:41 | **The return**: the same white room, the same framing as the opening. Three blinks; on the last one, the eyes open in **heterochromia** (left blue, right red) and glow. The title *LINKED//SPIRITS* (7:12). **Voice C**, the merged voice, sings the last two lines: *I wake with memories not my own, and hear a name they never knew.* |
 
 ## How it is made
@@ -87,8 +89,11 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
   occluders would only add noise), ambient occlusion, Blinn-Phong specular with
   Fresnel, environment reflections, a floor reflection pass, a glass partition, and
   emissive systems (screens, ceiling strips, the voice-driven light).
-* **Particles**: a vertex shader turns `gl_VertexID` into motes of light,
-  bodies of light, star fields, ring fragments and structures of light.
+* **Particles**: a vertex shader turns `gl_VertexID` (hashed with an integer
+  hash) into motes of light, bodies of light, star fields, ring fragments,
+  braided wakes, and one great disc: a two-armed spiral galaxy (arms, old disc,
+  bulge, pink knots), a disc of newborn worlds, or a planetary ring lit and
+  shadowed by its planet. Worlds hide the particles behind them.
 * **The dissolution of the world** is built from a snapshot:
   * the frame at the chosen moment is rendered once more (the director is a
     pure function of time) into a colour + ray-distance target;
@@ -101,6 +106,12 @@ One bar = 2.4 s (100 BPM in 4/4); 189 bars.
 * **Post**: a 6-level bloom pyramid, a 40-tap gather depth of field weighted by
   each sample's circle of confusion, subtle chromatic fringe, ACES, a cool
   "material world" grade vs an astral grade, vignette, grain, and the title.
+* **Lyrics**: every sung line is drawn once at start-up into a text atlas (GDI
+  on Windows). The post pass outlines the glyphs in the colour of the singer
+  (green: the android, red: the cyborg, light grey: the duo and the merged
+  voice after the awakening), lets each line form from left to right behind a
+  glowing edge, and dissolves it grain by grain as it rises to make room for
+  the next one.
 
 ### Characters: `src/shaders/char.glsl`, `src/director.c`
 
