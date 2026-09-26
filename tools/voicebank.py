@@ -310,7 +310,7 @@ def ls_fit(L, keys, W=None):
     return V
 
 
-def build_bank(lines, an, thr=3.5, M=10, qscale=1.0, rdb=1.5, margin=2, thr_mid=None, edge=0.025, uniform=False, lsfit=False, pw=0.0, tags=None, eh=4):
+def build_bank(lines, an, thr=3.5, M=10, qscale=1.0, rdb=1.5, margin=2, thr_mid=None, edge=0.025, uniform=False, lsfit=False, pw=0.0, tags=None, eh=4, dz=0.0, qslope=0.0, ew=0.0):
     """collect unique words -> keyframe data.  Returns dict with decoded (reconstructed)
     frames for testing and the packed streams.  tags[i] prefixes the word keys of line i
     (one bank can hold the words of several speakers)."""
@@ -337,6 +337,8 @@ def build_bank(lines, an, thr=3.5, M=10, qscale=1.0, rdb=1.5, margin=2, thr_mid=
                         c = (bnd[pi] + bnd[pi + 1]) / 2
                         force.append(int(round(c / 0.005)))
                         if p in DIPH: force.append(int(round((bnd[pi] + 0.3 * (bnd[pi + 1] - bnd[pi])) / 0.005)))
+            if ew:                               # quiet frames (breaths, closures, tails) need fewer keyframes
+                th = np.asarray(th, float) * (1 + ew * (1 - np.sqrt(G / G.max())))
             keys = vfr_keys(L, E, th, force=force)
             V = ls_fit(L, keys, np.sqrt(G / G.max()) + 0.05) if lsfit else L[keys]
             bank[key] = dict(ph=w['ph'], L=L, G=G, keys=keys, bnd=bnd, n=len(L), V=V)
@@ -347,11 +349,12 @@ def build_bank(lines, an, thr=3.5, M=10, qscale=1.0, rdb=1.5, margin=2, thr_mid=
     Wp = np.exp(-pw * np.arange(16) / 15)          # perceptual weight: low LSFs matter more
     U, S, Vt = np.linalg.svd((X - mu) * Wp, full_matrices=False)
     B = Vt[:M] / Wp; Bi = np.linalg.pinv(B); sd = S[:M] / np.sqrt(len(X))
-    step = qscale * 0.25 * sd * (np.arange(M) * 0.08 + 1) if not uniform else np.full(M, qscale * 0.01)
+    step = qscale * 0.25 * sd * (np.arange(M) * 0.08 + 1) if not uniform else qscale * 0.01 * (1 + qslope * np.arange(M) / 15)
     for k in order:
         b = bank[k]
         c = (b['V'] - mu) @ Bi
-        q = np.round(c / step).astype(int)
+        x = c / step                         # dz > 0: a dead zone, small values fall to zero (cheaper to code)
+        q = (np.sign(x) * np.floor(np.abs(x) + 0.5 - dz)).astype(int) if dz else np.round(x).astype(int)
         b['q'] = q
         rec = mu + (q * step) @ B
         rec = np.maximum.accumulate(np.clip(rec, 0.005, np.pi - 0.005), axis=1)

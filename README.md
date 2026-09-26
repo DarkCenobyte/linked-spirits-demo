@@ -21,7 +21,10 @@ the same.
 * Windows 10/11 x64, a GPU with OpenGL 4.6 (a recent discrete GPU is
   recommended; the scenes are heavy raymarching).
 * Prebuilt binaries are in [`release/`](release/), all the same film:
-  * `linked_spirits32_kkrunchy.exe`: the smallest (32-bit, kkrunchy);
+  * `linked_spirits_64k.exe`: **the 64k edition**, 65 536 bytes (32-bit,
+    kkrunchy, a leaner voice bank);
+  * `linked_spirits32_kkrunchy.exe`: the smallest with the full voice bank
+    (32-bit, kkrunchy);
   * `linked_spirits_squishy.exe`: the smallest 64-bit (squishy);
   * `linked_spirits_upx.exe`: 64-bit, UPX;
   * `linked_spirits.exe`: 64-bit, unpacked.
@@ -41,6 +44,7 @@ the same.
 
 | file | packer | bytes |
 |---|---|---|
+| `linked_spirits_64k.exe` | kkrunchy_k7 0.23a4 `--best` (32-bit), 64k voice bank | **65 536** (64 KiB) |
 | `linked_spirits32_kkrunchy.exe` | kkrunchy_k7 0.23a4 `--best` (32-bit) | **75 776** (74 KiB) |
 | `linked_spirits_squishy.exe` | squishy 0.2.0 (64-bit) | **79 872** (78 KiB) |
 | `linked_spirits_upx.exe` | UPX 4.2.2 `--best --ultra-brute --lzma` (64-bit) | 98 816 |
@@ -64,8 +68,10 @@ saves another 1 KB with kkrunchy. The x87 soundtrack was checked against the
 SSE one: same loudness to 0.06 dB on average, and the sung lyrics come back as
 well (word error rate 6.5% vs 7.2%). 32-bit code is denser than x86-64 (no REX
 prefixes, 4-byte pointers), which is why the smallest build is 32-bit.
-Importing DLL functions by hash is already what kkrunchy, squishy and Crinkler
-do; with UPX it would save a few hundred bytes at most (the OpenGL functions
+Fatpack was not tried: it is an LZMA packer for x64 with a larger loader,
+built for compatibility (TLS, Rust or Delphi executables) rather than size, so
+it could at best match UPX. Importing DLL functions by hash is already what
+kkrunchy, squishy and Crinkler do; with UPX it would save a few hundred bytes at most (the OpenGL functions
 have to be looked up by name anyway).
 
 Artistic quality came first. At 77.5 KiB, going under 64 KiB would have
@@ -82,6 +88,30 @@ where it shows most:
 * **the lyrics on screen**, an anamorphic streak on the brightest lights, a
   furnished medical corridor, the twisting corridor behind her, and the run on
   a planetary ring.
+
+### The 64k edition
+
+Inside the kkrunchy build (73.6 KB of packed data), the voice bank weighs
+37.1 KB, the shaders 14.6 KB, the lyrics 0.7 KB and the code with the rest of
+the data 21.2 KB. The code and shaders were already minified to the point
+where further tricks (macros for GLSL built-ins, other compiler switches) gain
+a few dozen bytes, and a dedicated arithmetic coder for the voice coefficients
+would not beat kkrunchy's own context mixing (they are close to random at this
+precision). So the 64k edition changes only how the voice bank spends its
+bits, measured by rate and distortion rather than guessed:
+
+* fewer spectral keyframes where the voice is quiet (breaths, closures, the
+  tails of notes, which the music also masks): the keyframe threshold grows
+  with 1.3 × (1 - √(energy / peak energy));
+* loudness in 1.75 dB steps instead of 1.5 dB (still every 10 ms).
+
+Everything else is identical: both speakers, every word, every frame of the
+film, the same score and code. The bank shrinks from 39.6 to 28.3 KB (LZMA) and
+its energy-weighted spectral error grows from 1.26 to 1.63 dB, mostly in the
+quiet frames. The sung lyrics stay about as intelligible: Whisper word error
+rates of 7.5-9.2% across the candidates tried, against 7.2% for the full bank,
+differences that are within the test's noise. The setting kept is the one
+closest to the full bank that still fits in 65 536 bytes.
 
 Before that, the bytes above 64 KiB had gone into the cyborg (her body, the
 machine and the cable dome of the cathedral) and the dissolution of the
@@ -301,7 +331,7 @@ Requirements: `x86_64-w64-mingw32-gcc` (GCC 13), `upx`, `python3`.
 
 ```sh
 ./build.sh            # build/linked_spirits.exe and build/linked_spirits_upx.exe
-tools/pack.sh         # build/linked_spirits_squishy.exe and build/linked_spirits32_kkrunchy.exe
+tools/pack.sh         # build/linked_spirits_squishy.exe, build/linked_spirits32_kkrunchy.exe, build/linked_spirits_64k.exe
 ./build.sh debug      # build/linked_spirits_debug.exe, logs to debug.log
 ./build.sh data       # regenerate src/gen_score.h and src/gen_voice.h
 ```
@@ -340,5 +370,5 @@ CAMH="0 0 .8 30" build/preview frames 50 50 1 out   # camera relative to her hea
 | `src/director.c` | the film: shots, cameras, poses, animation, uniform layout |
 | `src/synth.c`, `src/voice.c` | music synthesis and singing-voice synthesis |
 | `src/shaders/*.glsl` | shaders (embedded by `tools/embed_shaders.py`) |
-| `src/gen_score.h`, `src/gen_voice.h` | generated data: score and voice bank (`src/gen_shaders.h` is written by every `build.sh` run) |
+| `src/gen_score.h`, `src/gen_voice.h`, `src/gen_voice_64k.h` | generated data: score, voice bank, the 64k edition's voice bank (`src/gen_shaders.h` is written by every `build.sh` run) |
 | `tools/` | score, voice bank builder, minifier, Whisper tests, packing (`pack.sh`, `kkrunchy_gcc.py`) |

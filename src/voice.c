@@ -7,7 +7,11 @@
  * vibrato, formant scaling (voice identity), time-warping of vowels onto
  * notes, coarticulation across word joins and the lipsync curves.
  */
+#ifdef VOICE64K
+#include "gen_voice_64k.h"      /* the 64k edition's leaner bank */
+#else
 #include "gen_voice.h"
+#endif
 
 #define VSR 16000.0f
 #ifndef MELP
