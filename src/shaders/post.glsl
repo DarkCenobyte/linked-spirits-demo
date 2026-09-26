@@ -49,7 +49,7 @@ void main(){
  c*=1.-.28*pow(length((q-.5)*vec2(1.3,1.)),2.2);
  // title
  if(TITLE>0.){
-  vec2 tq=vec2((q.x-.5)*1.6+.5,(q.y-.5)*1.6*816./256.*.42+.5);
+  vec2 tq=vec2((q.x-.5)/.74+.5,(q.y-.5)/.217+.5);
   if(tq.x>0.&&tq.x<1.&&tq.y>0.&&tq.y<1.)c+=vec3(.9,.95,1.)*texture(X,tq).r*TITLE;
  }
  // grain

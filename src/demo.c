@@ -142,6 +142,7 @@ static void demo_frame(float t)
         use(PR_PART);
         glBindTextureUnit(1, tex_dep);
         glDrawArrays(GL_POINTS, 0, np);
+        if (U[62 * 4 + 2] > 0) glDrawArrays(GL_LINES, 10000000, (int)U[62 * 4 + 2]);
         glDisable(GL_BLEND);
     }
     /* 3: bloom pyramid */

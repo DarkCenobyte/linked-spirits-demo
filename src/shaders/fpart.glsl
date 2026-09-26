@@ -1,10 +1,11 @@
 in vec4 pc;
 in float pdist;
 in float psz;
+in float pline;
 out vec4 o;
 layout(binding=1) uniform sampler2D D;
 void main(){
- vec2 c=gl_PointCoord*2.-1.;
+ vec2 c=pline>.5?vec2(0):gl_PointCoord*2.-1.;
  float r=dot(c,c);
  if(r>1.)discard;
  float sd=texelFetch(D,ivec2(gl_FragCoord.xy),0).x;

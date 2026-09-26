@@ -35,6 +35,14 @@ static void hook(float *u)
         char k[16]; const char *v; sprintf(k, "U%d", i);
         if ((v = getenv(k))) sscanf(v, "%f %f %f %f", u + i * 4, u + i * 4 + 1, u + i * 4 + 2, u + i * 4 + 3);
     }
+    {   /* CAMH="dx dy dz fov": camera placed relative to the android's head, aimed at her neck */
+        const char *v = getenv("CAMH"); float d[4];
+        if (v && sscanf(v, "%f %f %f %f", d, d + 1, d + 2, d + 3) == 4) {
+            float *h = u + 23 * 4;
+            u[4] = h[0] + d[0]; u[5] = h[1] + d[1]; u[6] = h[2] + d[2]; u[7] = d[3];
+            u[8] = h[0]; u[9] = h[1] - 0.08f; u[10] = h[2]; u[11] = 0;
+        }
+    }
 }
 
 static void load_text(void)
