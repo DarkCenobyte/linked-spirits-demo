@@ -75,9 +75,9 @@ float face(vec3 p0,vec2 bl2,float mo,float mr,float sty){
  ear=min(ear,cyl(eq,.009,.0075)-.001);
  if(sty>0.){ // cable connectors where the ears would be
   vec3 k=eq;k.xz=abs(k.xz);
-  ear=min(ear,cap(q,vec3(.06,-.012,-.02),vec3(.12,-.05,-.09),.007));
-  ear=min(ear,cap(q,vec3(.062,.004,-.01),vec3(.13,.02,-.07),.006));
-  ear=min(ear,cap(q,vec3(.058,-.03,-.03),vec3(.1,-.09,-.08),.008));}
+  ear=min(ear,cap(q,vec3(.06,-.012,-.02),vec3(.083,-.024,-.042),.0075));
+  ear=min(ear,cap(q,vec3(.062,.004,-.01),vec3(.088,.012,-.032),.0065));
+  ear=min(ear,cap(q,vec3(.058,-.03,-.03),vec3(.078,-.048,-.05),.0085));}
  float bo=sph(q-vec3(.02,.103,.018),.0022);
  if(min(ear,bo)<d){d=min(ear,bo);gM=3.;}
  return d;
